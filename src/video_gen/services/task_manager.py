@@ -2,26 +2,44 @@
 
 from __future__ import annotations
 
+import logging
 from threading import Lock
-from typing import Dict
+from typing import Dict, Optional
 
+from ..config import ServiceConfig, load_service_config
 from ..workflow.agents.dummy import create_dummy_agents
+from ..workflow.agents.production import create_production_agents
 from ..workflow.models import TaskContext
 from ..workflow.orchestrator import VideoGenerationOrchestrator
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TaskManager:
     """Very small synchronous task manager for prototyping."""
 
-    def __init__(self) -> None:
-        (
-            script_agent,
-            visual_planner,
-            asset_agent,
-            camera_agent,
-            timeline_agent,
-            synthesis_agent,
-        ) = create_dummy_agents()
+    def __init__(self, config: Optional[ServiceConfig] = None) -> None:
+        config = config or load_service_config()
+        try:
+            (
+                script_agent,
+                visual_planner,
+                asset_agent,
+                camera_agent,
+                timeline_agent,
+                synthesis_agent,
+            ) = create_production_agents(config)
+            LOGGER.info("TaskManager initialised with production agents")
+        except Exception as exc:  # pragma: no cover - fallback path
+            LOGGER.warning("Falling back to dummy agents: %s", exc)
+            (
+                script_agent,
+                visual_planner,
+                asset_agent,
+                camera_agent,
+                timeline_agent,
+                synthesis_agent,
+            ) = create_dummy_agents()
         self._orchestrator = VideoGenerationOrchestrator(
             script_agent,
             visual_planner,
