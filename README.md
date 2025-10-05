@@ -11,7 +11,6 @@
 
 当前仓库提供了以下能力：
 
-
 - 基于 dataclass 的任务上下文与数据契约定义。
 - 可串行执行的工作流编排器以及六类 Agent 接口。
 - 一组确定性的 Dummy Agent，便于端到端跑通流程和后续替换为真实大模型调用。
@@ -19,15 +18,25 @@
   - 剧本/分镜/运镜/时间线全部使用 OpenAI 大模型（含 DALL·E 3 图像生成）。
   - 讯飞 TTS 负责配音合成，Mubert 自动生成背景音乐，Freesound 提供环境音效。
 - FastAPI 原型接口，可创建任务并查询生成结果。
-- Pytest 用例，用于验证工作流串联是否符合预期。
 
 ## 快速开始
 
 ```bash
-pip install -e .[dev]
-pytest
+pip install -e .
 uvicorn video_gen.api.server:app --reload
 ```
+
+### 使用 Moana 迷你虚拟环境
+
+仓库内置了一个轻量级的 `moana` CLI，用于根据需求快速创建虚拟环境。要生成带有最小依赖的环境，可执行：
+
+```bash
+moana create mini --python /path/to/python3.12
+```
+
+默认会在项目根目录创建 `.venv-moana`，并以可编辑模式安装本项目依赖。
+
+> 若仅想预览会执行的命令，可追加 `--dry-run` 参数；再次创建同名目录时可使用 `--force` 覆盖已有环境。
 
 ### 配置真实服务
 
