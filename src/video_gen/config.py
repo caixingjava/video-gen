@@ -59,11 +59,41 @@ class StorageSettings:
 
 
 @dataclass
+class DeepSeekSettings:
+    api_key: str
+    model: str = "deepseek-chat"
+    base_url: Optional[str] = None
+    temperature: float = 0.3
+
+
+@dataclass
+class DoubaoSettings:
+    api_key: str
+    model: str = "doubao-vision"
+    base_url: Optional[str] = None
+    negative_prompt: Optional[str] = None
+
+
+@dataclass
+class TextGenerationSettings:
+    provider: str = "openai"
+
+
+@dataclass
+class ImageGenerationSettings:
+    provider: str = "openai"
+
+
+@dataclass
 class ServiceConfig:
     openai: Optional[OpenAISettings] = None
     xunfei: Optional[XunfeiSettings] = None
     dashscope_music: Optional[DashscopeMusicSettings] = None
     dashscope_ambience: Optional[DashscopeAmbienceSettings] = None
+    deepseek: Optional[DeepSeekSettings] = None
+    doubao: Optional[DoubaoSettings] = None
+    text_generation: TextGenerationSettings = field(default_factory=TextGenerationSettings)
+    image_generation: ImageGenerationSettings = field(default_factory=ImageGenerationSettings)
     storage: StorageSettings = field(default_factory=StorageSettings)
 
 
@@ -146,6 +176,28 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
                 or os.environ.get("DASHSCOPE_API_KEY")
             )
             else None,
+            "deepseek": {
+                "api_key": _coalesce(os.environ.get("DEEPSEEK_API_KEY")),
+                "base_url": _coalesce(os.environ.get("DEEPSEEK_BASE_URL")),
+                "model": _coalesce(os.environ.get("DEEPSEEK_MODEL")) or "deepseek-chat",
+                "temperature": float(os.environ.get("DEEPSEEK_TEMPERATURE", 0.3)),
+            }
+            if _coalesce(os.environ.get("DEEPSEEK_API_KEY"))
+            else None,
+            "doubao": {
+                "api_key": _coalesce(os.environ.get("DOUBAO_API_KEY")),
+                "base_url": _coalesce(os.environ.get("DOUBAO_BASE_URL")),
+                "model": _coalesce(os.environ.get("DOUBAO_MODEL")) or "doubao-vision",
+                "negative_prompt": _coalesce(os.environ.get("DOUBAO_NEGATIVE_PROMPT")),
+            }
+            if _coalesce(os.environ.get("DOUBAO_API_KEY"))
+            else None,
+            "text_generation": {
+                "provider": _coalesce(os.environ.get("TEXT_GENERATION_PROVIDER")) or "openai",
+            },
+            "image_generation": {
+                "provider": _coalesce(os.environ.get("IMAGE_GENERATION_PROVIDER")) or "openai",
+            },
             "storage": {
                 "output_dir": _coalesce(os.environ.get("VIDEO_GEN_OUTPUT_DIR"))
                 or "./var/output",
@@ -173,6 +225,22 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         if "dashscope_ambience" in data
         else None
     )
+    deepseek_settings = (
+        _parse_section(data["deepseek"], DeepSeekSettings)
+        if "deepseek" in data
+        else None
+    )
+    doubao_settings = (
+        _parse_section(data["doubao"], DoubaoSettings)
+        if "doubao" in data
+        else None
+    )
+    text_generation = _parse_section(
+        data.get("text_generation", {}), TextGenerationSettings
+    )
+    image_generation = _parse_section(
+        data.get("image_generation", {}), ImageGenerationSettings
+    )
     storage_settings = _parse_section(data.get("storage", {}), StorageSettings)
 
     return ServiceConfig(
@@ -180,6 +248,10 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         xunfei=xunfei_settings,
         dashscope_music=dashscope_settings,
         dashscope_ambience=dashscope_ambience,
+        deepseek=deepseek_settings,
+        doubao=doubao_settings,
+        text_generation=text_generation,
+        image_generation=image_generation,
         storage=storage_settings,
     )
 
@@ -190,6 +262,10 @@ __all__ = [
     "XunfeiSettings",
     "DashscopeMusicSettings",
     "DashscopeAmbienceSettings",
+    "DeepSeekSettings",
+    "DoubaoSettings",
+    "TextGenerationSettings",
+    "ImageGenerationSettings",
     "StorageSettings",
     "ServiceConfig",
     "load_service_config",

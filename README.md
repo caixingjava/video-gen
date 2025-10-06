@@ -51,9 +51,11 @@ cp config/services.example.toml config/services.toml
 ```
 
 2. 按需填写以下字段（示例文件中已标注申请地址）：
-   - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。
-  - **讯飞 TTS**：使用科大讯飞“在线语音合成（Text-to-Speech WebAPI v2）”能力，在 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
-  - **阿里云 DashScope 音乐生成 / 环境音效**：在 <https://dashscope.aliyun.com/> 注册并开通音频生成能力，单一 API Key 既可用于背景音乐，也可用于生成环境音效。
+    - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。
+    - **讯飞 TTS**：使用科大讯飞“在线语音合成（Text-to-Speech WebAPI v2）”能力，在 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
+    - **阿里云 DashScope 音乐生成 / 环境音效**：在 <https://dashscope.aliyun.com/> 注册并开通音频生成能力，单一 API Key 既可用于背景音乐，也可用于生成环境音效。
+    - **DeepSeek**（可选）：在 <https://platform.deepseek.com/> 申请 API Key，按需配置自定义 `base_url`、模型与温度，用于人物传记初稿的 LLM 推理。
+    - **豆包图像生成**（可选）：在 <https://www.volcengine.com/product/doubao> 申请火山引擎豆包 API Key，可指定独立 `base_url`、模型与负面提示词，用于角色立绘生成。
 
 3. 编辑 `config/services.toml` 将上述凭证写入对应字段。若更倾向使用环境变量，也可以导出：
 
@@ -68,9 +70,31 @@ export DASHSCOPE_MUSIC_STYLE="中国古风"
 export DASHSCOPE_AMBIENCE_API_KEY=$DASHSCOPE_API_KEY  # 若环境音效使用独立密钥可替换此行
 export DASHSCOPE_AMBIENCE_STYLE="中国场景环境音"
 export DASHSCOPE_AMBIENCE_DURATION=45
+export DEEPSEEK_API_KEY=sk-deepseek...
+export DEEPSEEK_BASE_URL=""  # 可选，默认为官方 SaaS 地址
+export DEEPSEEK_MODEL="deepseek-chat"
+export DEEPSEEK_TEMPERATURE=0.3
+export DOUBAO_API_KEY=sk-doubao...
+export DOUBAO_BASE_URL=""  # 可选，默认为官方 SaaS 地址
+export DOUBAO_MODEL="doubao-vision"
+export DOUBAO_NEGATIVE_PROMPT=""
+export TEXT_GENERATION_PROVIDER=openai  # 可切换为 deepseek
+export IMAGE_GENERATION_PROVIDER=openai  # 可切换为 doubao
 ```
 
 未填写或缺失凭证时，系统会自动回退到内置的 Dummy Agent，便于在无真实账号的情况下进行流程验证。
+
+如需切换工作流使用的服务，可在 `config/services.toml` 中的 `[text_generation]` 与 `[image_generation]` 模块调整 `provider` 字段：
+
+```toml
+[text_generation]
+provider = "deepseek"  # 使用 DeepSeek 生成“人物一生介绍”等文本
+
+[image_generation]
+provider = "doubao"  # 使用豆包生成分镜图像
+```
+
+同样也可以通过环境变量 `TEXT_GENERATION_PROVIDER` 和 `IMAGE_GENERATION_PROVIDER` 动态切换；未显式配置时默认仍调用 OpenAI。
 
 ### 4. 启动项目并提交关键词
 

@@ -21,6 +21,8 @@ from ...config import ServiceConfig
 from ...providers import (
     DashscopeAmbienceClient,
     DashscopeMusicClient,
+    DeepSeekWorkflowClient,
+    DoubaoImageClient,
     OpenAIWorkflowClient,
     XunfeiTTSClient,
 )
@@ -28,6 +30,14 @@ from ...providers import (
 
 class OpenAIScriptAgent(ScriptAgent):
     def __init__(self, client: OpenAIWorkflowClient) -> None:
+        self._client = client
+
+    def run(self, context: TaskContext) -> List[ScriptSection]:
+        return self._client.generate_script(context.persona).sections
+
+
+class DeepSeekScriptAgent(ScriptAgent):
+    def __init__(self, client: DeepSeekWorkflowClient) -> None:
         self._client = client
 
     def run(self, context: TaskContext) -> List[ScriptSection]:
@@ -54,6 +64,21 @@ class OpenAIAssetAgent(AssetAgent):
             )
             asset = self._client.generate_dalle_image(shot.shot_id, prompt)
             assets.append(asset)
+        return assets
+
+
+class DoubaoAssetAgent(AssetAgent):
+    def __init__(self, client: DoubaoImageClient) -> None:
+        self._client = client
+
+    def run(self, context: TaskContext, storyboard: List[StoryboardShot]) -> List[VisualAsset]:
+        assets: List[VisualAsset] = []
+        for shot in storyboard:
+            prompt = (
+                f"{context.persona} {shot.scene}. 中国风格，高清细节，纪录片质感。"
+            )
+            result = self._client.generate_image(shot.shot_id, prompt)
+            assets.append(result.asset)
         return assets
 
 
@@ -183,9 +208,23 @@ def create_production_agents(config: ServiceConfig):
         )
 
     openai_client = OpenAIWorkflowClient(config.openai)
-    script_agent = OpenAIScriptAgent(openai_client)
+    text_provider = (config.text_generation.provider or "openai").lower()
+    if text_provider == "deepseek":
+        if not config.deepseek:
+            raise RuntimeError("DeepSeek provider selected but no deepseek settings supplied")
+        deepseek_client = DeepSeekWorkflowClient(config.deepseek)
+        script_agent = DeepSeekScriptAgent(deepseek_client)
+    else:
+        script_agent = OpenAIScriptAgent(openai_client)
     visual_agent = OpenAIVisualPlannerAgent(openai_client)
-    asset_agent = OpenAIAssetAgent(openai_client)
+    image_provider = (config.image_generation.provider or "openai").lower()
+    if image_provider == "doubao":
+        if not config.doubao:
+            raise RuntimeError("Doubao provider selected but no doubao settings supplied")
+        doubao_client = DoubaoImageClient(config.doubao)
+        asset_agent = DoubaoAssetAgent(doubao_client)
+    else:
+        asset_agent = OpenAIAssetAgent(openai_client)
     camera_agent = OpenAICameraAgent(openai_client)
     timeline_agent = OpenAITimelineAgent(openai_client)
 
@@ -209,8 +248,10 @@ def create_production_agents(config: ServiceConfig):
 
 __all__ = [
     "OpenAIScriptAgent",
+    "DeepSeekScriptAgent",
     "OpenAIVisualPlannerAgent",
     "OpenAIAssetAgent",
+    "DoubaoAssetAgent",
     "OpenAICameraAgent",
     "OpenAITimelineAgent",
     "ExternalSynthesisAgent",

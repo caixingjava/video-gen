@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+
 try:  # pragma: no cover - optional dependency
-    from fastapi import FastAPI, HTTPException
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.responses import HTMLResponse
 except ImportError:  # pragma: no cover
     FastAPI = None  # type: ignore
     HTTPException = Exception  # type: ignore
+    Request = object  # type: ignore
     HTMLResponse = None  # type: ignore
 
 try:  # pragma: no cover - optional dependency
@@ -358,20 +361,30 @@ INDEX_HTML = """<!DOCTYPE html>
 </html>"""
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 if FastAPI is not None:  # pragma: no branch - executed only when FastAPI is available
     app = FastAPI(title="Video Generation Workflow")
 
     @app.get("/", response_class=HTMLResponse)
-    def index() -> str:  # pragma: no cover - integration path
+    def index(request: Request) -> str:  # pragma: no cover - integration path
+        LOGGER.info("GET %s", request.url)
         return INDEX_HTML
 
     @app.post("/tasks", response_model=TaskResponse)
-    def create_task(request: CreateTaskRequest) -> TaskResponse:  # pragma: no cover - integration path
-        context = TASK_MANAGER.start_task(request.persona)
+    def create_task(  # pragma: no cover - integration path
+        request: Request, body: CreateTaskRequest
+    ) -> TaskResponse:
+        LOGGER.info("POST %s", request.url)
+        context = TASK_MANAGER.start_task(body.persona)
         return TaskResponse(task=context.to_dict())
 
     @app.get("/tasks/{task_id}", response_model=TaskResponse)
-    def get_task(task_id: str) -> TaskResponse:  # pragma: no cover - integration path
+    def get_task(  # pragma: no cover - integration path
+        request: Request, task_id: str
+    ) -> TaskResponse:
+        LOGGER.info("GET %s", request.url)
         context = TASK_MANAGER.get_task(task_id)
         if not context:
             raise HTTPException(status_code=404, detail="Task not found")
