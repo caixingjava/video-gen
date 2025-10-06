@@ -28,19 +28,25 @@
 - 访问官方发布页：<https://docs.conda.io/en/latest/miniconda.html>
 - 根据本机操作系统选择对应的安装包（Windows/macOS/Linux），推荐下载最新的 64 位安装程序。
 
-### 2. 安装 Miniconda 并创建虚拟环境
+### 2. 安装 Miniconda 并在项目目录内创建虚拟环境
 
 1. 按官网指引运行安装程序：
    - **Windows**：双击 `.exe`，在向导中勾选“Add Miniconda to my PATH”（或在后续步骤手动添加）。
    - **macOS/Linux**：为 `.sh` 文件增加执行权限（`chmod +x`），随后运行 `./Miniconda3-latest-*.sh` 并跟随提示完成安装。
-2. 安装完成后重新打开终端（或在 Windows 使用“Miniconda Prompt”），执行以下命令创建并激活专用环境：
+2. 安装完成后重新打开终端（或在 Windows 使用“Miniconda Prompt”），进入本项目目录，然后执行以下命令在仓库根目录内创建独立环境：
 
 ```bash
-conda create -n video-gen python=3.12
-conda activate video-gen
+# 进入项目根目录，例如：
+cd /path/to/video-gen
+
+# 使用 --prefix 将环境固定到当前仓库的 .conda 目录
+conda create --yes --prefix ./.conda python=3.12
+conda activate ./\.conda
 ```
 
-3. 在激活的 `video-gen` 环境中安装项目依赖：
+> `conda activate ./\.conda` 会将解释器切换到项目内部的 `.conda` 文件夹，避免与全局环境互相影响。若需删除环境，直接移除该目录即可（`rm -rf .conda`）。
+
+3. 在激活的项目环境中安装依赖：
 
 ```bash
 pip install --upgrade pip
@@ -76,7 +82,7 @@ export FREESOUND_API_KEY=...
 
 ### 4. 启动项目并提交关键词
 
-1. 确保仍然处于 `video-gen` Conda 环境：`conda activate video-gen`。
+1. 确保仍然处于项目专用 Conda 环境：`conda activate ./\.conda`。
 2. 启动 FastAPI 服务：
 
 ```bash
