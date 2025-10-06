@@ -19,8 +19,8 @@ from ..models import (
 from .base import AssetAgent, CameraAgent, ScriptAgent, SynthesisAgent, TimelineAgent, VisualPlannerAgent
 from ...config import ServiceConfig
 from ...providers import (
+    DashscopeAmbienceClient,
     DashscopeMusicClient,
-    FreesoundClient,
     OpenAIWorkflowClient,
     XunfeiTTSClient,
 )
@@ -84,12 +84,12 @@ class ExternalSynthesisAgent(SynthesisAgent):
         self,
         tts_client: XunfeiTTSClient,
         music_client: DashscopeMusicClient,
-        freesound_client: FreesoundClient,
+        ambience_client: DashscopeAmbienceClient,
         output_dir: Path,
     ) -> None:
         self._tts = tts_client
         self._music = music_client
-        self._freesound = freesound_client
+        self._ambience = ambience_client
         self._output_dir = output_dir
 
     def _render_narration(self, context: TaskContext, timeline: List[TimelineEntry]) -> List[Path]:
@@ -109,7 +109,9 @@ class ExternalSynthesisAgent(SynthesisAgent):
         bgm_path = self._music.generate_track(
             context.persona, self._output_dir / f"{context.task_id}_bgm.mp3"
         )
-        ambience_path = self._freesound.download_preview(self._output_dir / f"{context.task_id}_ambience.mp3")
+        ambience_path = self._ambience.generate_ambience(
+            context.persona, self._output_dir / f"{context.task_id}_ambience.mp3"
+        )
 
         video_placeholder = self._output_dir / f"{context.task_id}.mp4"
         if not video_placeholder.exists():
@@ -163,7 +165,7 @@ def create_production_agents(config: ServiceConfig):
         not config.openai
         or not config.xunfei
         or not config.dashscope_music
-        or not config.freesound
+        or not config.dashscope_ambience
     ):
         missing = [
             name
@@ -171,12 +173,12 @@ def create_production_agents(config: ServiceConfig):
                 "openai": config.openai,
                 "xunfei": config.xunfei,
                 "dashscope_music": config.dashscope_music,
-                "freesound": config.freesound,
+                "dashscope_ambience": config.dashscope_ambience,
             }.items()
             if value is None
         ]
         raise RuntimeError(
-            "Production agents require OpenAI, Xunfei, DashScope music and Freesound settings. "
+            "Production agents require OpenAI, Xunfei, and DashScope music/ambience settings. "
             f"Missing: {', '.join(missing)}"
         )
 
@@ -190,9 +192,9 @@ def create_production_agents(config: ServiceConfig):
     output_dir = Path(config.storage.output_dir)
     tts_client = XunfeiTTSClient(config.xunfei)
     music_client = DashscopeMusicClient(config.dashscope_music)
-    freesound_client = FreesoundClient(config.freesound)
+    ambience_client = DashscopeAmbienceClient(config.dashscope_ambience)
     synthesis_agent = ExternalSynthesisAgent(
-        tts_client, music_client, freesound_client, output_dir
+        tts_client, music_client, ambience_client, output_dir
     )
 
     return (

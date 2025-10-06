@@ -46,10 +46,11 @@ class DashscopeMusicSettings:
 
 
 @dataclass
-class FreesoundSettings:
+class DashscopeAmbienceSettings:
     api_key: str
-    search_query: str = "historical ambience"
-    license: str = "Creative Commons 0"
+    model: str = "text-to-music-001"
+    style: str = "中国场景环境音"
+    duration_seconds: int = 45
 
 
 @dataclass
@@ -62,7 +63,7 @@ class ServiceConfig:
     openai: Optional[OpenAISettings] = None
     xunfei: Optional[XunfeiSettings] = None
     dashscope_music: Optional[DashscopeMusicSettings] = None
-    freesound: Optional[FreesoundSettings] = None
+    dashscope_ambience: Optional[DashscopeAmbienceSettings] = None
     storage: StorageSettings = field(default_factory=StorageSettings)
 
 
@@ -130,14 +131,20 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
             }
             if _coalesce(os.environ.get("DASHSCOPE_API_KEY"))
             else None,
-            "freesound": {
-                "api_key": _coalesce(os.environ.get("FREESOUND_API_KEY")),
-                "search_query": _coalesce(os.environ.get("FREESOUND_QUERY"))
-                or "historical ambience",
-                "license": _coalesce(os.environ.get("FREESOUND_LICENSE"))
-                or "Creative Commons 0",
+            "dashscope_ambience": {
+                "api_key": _coalesce(
+                    os.environ.get("DASHSCOPE_AMBIENCE_API_KEY")
+                    or os.environ.get("DASHSCOPE_API_KEY")
+                ),
+                "model": _coalesce(os.environ.get("DASHSCOPE_AMBIENCE_MODEL"))
+                or "text-to-music-001",
+                "style": _coalesce(os.environ.get("DASHSCOPE_AMBIENCE_STYLE")) or "中国场景环境音",
+                "duration_seconds": int(os.environ.get("DASHSCOPE_AMBIENCE_DURATION", 45)),
             }
-            if _coalesce(os.environ.get("FREESOUND_API_KEY"))
+            if _coalesce(
+                os.environ.get("DASHSCOPE_AMBIENCE_API_KEY")
+                or os.environ.get("DASHSCOPE_API_KEY")
+            )
             else None,
             "storage": {
                 "output_dir": _coalesce(os.environ.get("VIDEO_GEN_OUTPUT_DIR"))
@@ -161,9 +168,9 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         if "dashscope_music" in data
         else None
     )
-    freesound_settings = (
-        _parse_section(data["freesound"], FreesoundSettings)
-        if "freesound" in data
+    dashscope_ambience = (
+        _parse_section(data["dashscope_ambience"], DashscopeAmbienceSettings)
+        if "dashscope_ambience" in data
         else None
     )
     storage_settings = _parse_section(data.get("storage", {}), StorageSettings)
@@ -172,7 +179,7 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         openai=openai_settings,
         xunfei=xunfei_settings,
         dashscope_music=dashscope_settings,
-        freesound=freesound_settings,
+        dashscope_ambience=dashscope_ambience,
         storage=storage_settings,
     )
 
@@ -182,7 +189,7 @@ __all__ = [
     "OpenAISettings",
     "XunfeiSettings",
     "DashscopeMusicSettings",
-    "FreesoundSettings",
+    "DashscopeAmbienceSettings",
     "StorageSettings",
     "ServiceConfig",
     "load_service_config",
