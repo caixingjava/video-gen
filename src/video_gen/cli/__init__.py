@@ -1,5 +1,3 @@
-"""Command-line utilities for :mod:`video_gen`."""
+"""Command-line utilities placeholder for :mod:`video_gen`."""
 
-from .moana import main
-
-__all__ = ["main"]
+__all__: list[str] = []

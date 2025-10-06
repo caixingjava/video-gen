@@ -17,6 +17,3 @@ dependencies = [
     "httpx>=0.27",
 ]
 
-[project.scripts]
-moana = "video_gen.cli.moana:main"
-
