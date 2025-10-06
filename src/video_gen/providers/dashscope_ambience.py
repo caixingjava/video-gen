@@ -14,7 +14,8 @@ from ..config import DashscopeAmbienceSettings
 class DashscopeAmbienceClient:
     """Generate ambient soundscapes via DashScope's audio generation API."""
 
-    API_URL = "https://dashscope.aliyuncs.com/api/v1/services/audio-generation/text-to-music"
+    # 使用 DashScope 新域名，保证在国内网络环境下可访问
+    API_URL = "https://dashscope.aliyun.com/api/v1/services/audio-generation/text-to-music"
 
     def __init__(self, settings: DashscopeAmbienceSettings, *, timeout: float = 60.0) -> None:
         self._settings = settings

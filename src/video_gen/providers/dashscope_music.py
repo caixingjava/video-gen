@@ -14,7 +14,8 @@ from ..config import DashscopeMusicSettings
 class DashscopeMusicClient:
     """Generate background music using DashScope's text-to-music API."""
 
-    API_URL = "https://dashscope.aliyuncs.com/api/v1/services/audio-generation/text-to-music"
+    # DashScope 官方新版域名，旧的 aliyuncs.com 已逐步下线
+    API_URL = "https://dashscope.aliyun.com/api/v1/services/audio-generation/text-to-music"
 
     def __init__(self, settings: DashscopeMusicSettings, *, timeout: float = 120.0) -> None:
         self._settings = settings

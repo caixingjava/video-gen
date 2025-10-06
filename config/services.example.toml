@@ -23,7 +23,7 @@ speed = 50
 
 [dashscope_music]
 # 阿里云 DashScope 音乐生成配置
-# 申请地址：https://dashscope.aliyuncs.com/
+# 申请地址：https://dashscope.aliyun.com/
 api_key = ""
 model = "text-to-music-001"
 style = "中国古风"
@@ -31,7 +31,7 @@ duration_seconds = 120
 
 [dashscope_ambience]
 # 阿里云 DashScope 环境音效配置（同样使用音频生成能力，可与音乐共用密钥）
-# 申请地址：https://dashscope.aliyuncs.com/
+# 申请地址：https://dashscope.aliyun.com/
 api_key = ""
 model = "text-to-music-001"
 style = "中国场景环境音"
