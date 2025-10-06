@@ -1,0 +1,40 @@
+[openai]
+# OpenAI API key used for LLM and DALL·E 3 requests
+# 申请地址：https://platform.openai.com/account/api-keys
+api_key = "sk-your-key"
+# Optional custom base url, leave empty to use the default api.openai.com endpoint
+base_url = ""
+# Chat/completions model used for workflow reasoning
+model = "gpt-4o-mini"
+# DALL·E 3 compatible image model identifier
+image_model = "gpt-image-1"
+# Optional temperature override (0-2). Lower keeps outputs deterministic.
+temperature = 0.3
+
+[xunfei_tts]
+# Xunfei (iFlytek) WebAPI credentials
+# 申请地址：https://www.xfyun.cn/services/online_tts
+app_id = ""
+api_key = ""
+api_secret = ""
+voice = "xiaoyan"
+format = "mp3"
+speed = 50
+
+[mubert]
+# API key retrieved from https://mubert.com/
+# 申请地址：https://mubert.com/render/pricing
+api_key = ""
+playlist = "cinematic"
+duration_seconds = 120
+
+[freesound]
+# Personal token from https://freesound.org/apiv2/app/
+# 申请地址：https://freesound.org/apiv2/app/
+api_key = ""
+search_query = "historical ambience"
+license = "Creative Commons 0"
+
+[storage]
+# Directory where synthesized media will be stored
+output_dir = "./var/output"
