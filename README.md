@@ -21,33 +21,47 @@
 
 ## 快速开始
 
+按“下载并安装 Miniconda → 准备项目环境 → 配置服务凭证 → 启动接口并提交任务”的顺序完成本地部署。
+
+### 1. 下载 Miniconda
+
+- 访问官方发布页：<https://docs.conda.io/en/latest/miniconda.html>
+- 根据本机操作系统选择对应的安装包（Windows/macOS/Linux），推荐下载最新的 64 位安装程序。
+
+### 2. 安装 Miniconda 并创建虚拟环境
+
+1. 按官网指引运行安装程序：
+   - **Windows**：双击 `.exe`，在向导中勾选“Add Miniconda to my PATH”（或在后续步骤手动添加）。
+   - **macOS/Linux**：为 `.sh` 文件增加执行权限（`chmod +x`），随后运行 `./Miniconda3-latest-*.sh` 并跟随提示完成安装。
+2. 安装完成后重新打开终端（或在 Windows 使用“Miniconda Prompt”），执行以下命令创建并激活专用环境：
+
 ```bash
+conda create -n video-gen python=3.12
+conda activate video-gen
+```
+
+3. 在激活的 `video-gen` 环境中安装项目依赖：
+
+```bash
+pip install --upgrade pip
 pip install -e .
-uvicorn video_gen.api.server:app --reload
 ```
 
-### 使用 Moana 迷你虚拟环境
+### 3. 配置真实服务凭证
 
-仓库内置了一个轻量级的 `moana` CLI，用于根据需求快速创建虚拟环境。要生成带有最小依赖的环境，可执行：
-
-```bash
-moana create mini --python /path/to/python3.12
-```
-
-默认会在项目根目录创建 `.venv-moana`，并以可编辑模式安装本项目依赖。
-
-> 若仅想预览会执行的命令，可追加 `--dry-run` 参数；再次创建同名目录时可使用 `--force` 覆盖已有环境。
-
-### 配置真实服务
-
-仓库提供了 `config/services.example.toml` 示例文件，包含 OpenAI、讯飞 TTS、Mubert、Freesound 的所需凭证字段。复制并填写实际值：
+1. 复制示例配置文件：
 
 ```bash
 cp config/services.example.toml config/services.toml
-# 编辑 config/services.toml 填入真实的 API Key/AppID 等信息
 ```
 
-启动服务时会自动读取 `config/services.toml`。也可通过环境变量覆盖，例如：
+2. 按需填写以下字段（示例文件中已标注申请地址）：
+   - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。
+   - **讯飞 TTS**：在科大讯飞开放平台 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
+   - **Mubert**：在 <https://mubert.com/render/pricing> 注册并申请 API Key。
+   - **Freesound**：登录 <https://freesound.org/apiv2/app/> 创建应用以获得个人 Token。
+
+3. 编辑 `config/services.toml` 将上述凭证写入对应字段。若更倾向使用环境变量，也可以导出：
 
 ```bash
 export OPENAI_API_KEY=sk-...
@@ -58,13 +72,22 @@ export MUBERT_API_KEY=...
 export FREESOUND_API_KEY=...
 ```
 
-当所有凭证均可用时，任务管理器会自动切换到生产版 Agent，调用真实的大模型、配音与音效服务；否则保持使用 Dummy Agent 以便本地开发。
+未填写或缺失凭证时，系统会自动回退到内置的 Dummy Agent，便于在无真实账号的情况下进行流程验证。
 
-启动服务后，可通过以下请求体验同步执行的示例流程：
+### 4. 启动项目并提交关键词
+
+1. 确保仍然处于 `video-gen` Conda 环境：`conda activate video-gen`。
+2. 启动 FastAPI 服务：
 
 ```bash
-curl -X POST http://localhost:8000/tasks -H 'Content-Type: application/json' \
+uvicorn video_gen.api.server:app --reload
+```
+
+3. 在另一个终端内（同样激活环境）调用接口，输入目标人物姓名触发生成：
+
+```bash
+curl -X POST http://127.0.0.1:8000/tasks -H 'Content-Type: application/json' \
   -d '{"persona": "诸葛亮"}'
 ```
 
-返回的 JSON 中会包含脚本、分镜、素材提示词、运镜方案以及虚拟的成片地址。实际项目可将 Dummy Agent 替换成对接大模型、图像/视频生成与 TTS 服务的实现。
+接口会返回剧本、分镜、素材提示词、运镜方案和音视频资源路径。凭证配置完整时将实际调用外部服务生成素材；缺省时会返回 Dummy 结果。
