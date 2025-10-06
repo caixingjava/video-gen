@@ -21,37 +21,26 @@
 
 ## 快速开始
 
-按“下载并安装 Miniconda → 准备项目环境 → 配置服务凭证 → 启动接口并提交任务”的顺序完成本地部署。
+按“确认系统 Python → 安装依赖 → 配置服务凭证 → 启动接口并提交任务”的顺序完成本地部署。
 
-### 1. 下载 Miniconda
+### 1. 确认系统 Python 版本
 
-- 访问官方发布页：<https://docs.conda.io/en/latest/miniconda.html>
-- 根据本机操作系统选择对应的安装包（Windows/macOS/Linux），推荐下载最新的 64 位安装程序。
+- 本项目面向 **Python 3.9.10**，请在终端执行 `python --version`（或 Windows 上使用 `py -3.9 --version`）确认默认解释器就是该版本。
+- 若命令返回的不是 3.9.10，请根据操作系统调整 PATH 或直接使用对应的绝对路径，例如：
+  - macOS/Linux：`/usr/bin/python3.9 --version`
+  - Windows：`C:\Python39\python.exe --version`
+- 后续所有命令都默认使用上述系统级 Python，可根据需要替换为实际可执行文件。若希望保持系统环境整洁，也可以使用 `python -m venv` 创建虚拟环境，但并非必需。
 
-### 2. 安装 Miniconda 并在项目目录内创建虚拟环境
+### 2. 安装项目依赖
 
-1. 按官网指引运行安装程序：
-   - **Windows**：双击 `.exe`，在向导中勾选“Add Miniconda to my PATH”（或在后续步骤手动添加）。
-   - **macOS/Linux**：为 `.sh` 文件增加执行权限（`chmod +x`），随后运行 `./Miniconda3-latest-*.sh` 并跟随提示完成安装。
-2. 安装完成后重新打开终端（或在 Windows 使用“Miniconda Prompt”），进入本项目目录，然后执行以下命令在仓库根目录内创建独立环境：
-
-```bash
-# 进入项目根目录，例如：
-cd /path/to/video-gen
-
-# 使用 --prefix 将环境固定到当前仓库的 .conda 目录
-conda create --yes --prefix ./.conda python=3.12
-conda activate ./\.conda
-```
-
-> `conda activate ./\.conda` 会将解释器切换到项目内部的 `.conda` 文件夹，避免与全局环境互相影响。若需删除环境，直接移除该目录即可（`rm -rf .conda`）。
-
-3. 在激活的项目环境中安装依赖：
+在确认 `python` 指向 3.9.10 之后，安装/升级 pip 并以可编辑模式安装当前项目：
 
 ```bash
-pip install --upgrade pip
-pip install -e .
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
+
+如果你的系统同时存在多个 Python 版本，请显式调用 3.9.10 对应的可执行文件或在 Windows 上使用 `py -3.9 -m pip ...`。
 
 ### 3. 配置真实服务凭证
 
@@ -82,14 +71,15 @@ export FREESOUND_API_KEY=...
 
 ### 4. 启动项目并提交关键词
 
-1. 确保仍然处于项目专用 Conda 环境：`conda activate ./\.conda`。
+1. 在任意终端中确认 `python --version` 仍然返回 3.9.10（如若不是，请重新调整 PATH 或改用 3.9.10 的可执行文件）。
 2. 启动 FastAPI 服务：
 
 ```bash
-uvicorn video_gen.api.server:app --reload
+python -m uvicorn video_gen.api.server:app --reload
 ```
 
-3. 在另一个终端内（同样激活环境）调用接口，输入目标人物姓名触发生成：
+   - 若在 Windows 上使用 `py` 启动，请改为 `py -3.9 -m uvicorn ...`。
+3. 在另一个终端中（同样确保使用 Python 3.9.10）调用接口，输入目标人物姓名触发生成：
 
 ```bash
 curl -X POST http://127.0.0.1:8000/tasks -H 'Content-Type: application/json' \

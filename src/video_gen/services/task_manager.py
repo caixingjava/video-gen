@@ -63,7 +63,7 @@ class TaskManager:
             self._tasks[result.task_id] = result
         return result
 
-    def get_task(self, task_id: str) -> TaskContext | None:
+    def get_task(self, task_id: str) -> Optional[TaskContext]:
         """Retrieve the stored context for a task."""
 
         with self._lock:

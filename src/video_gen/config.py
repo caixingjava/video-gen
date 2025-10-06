@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 try:
     import tomllib  # Python 3.11+
@@ -79,7 +79,7 @@ def _parse_section(data: dict[str, Any], cls: type[Any]) -> Any:
         raise ConfigurationError(f"Invalid configuration for {cls.__name__}: {exc}") from exc
 
 
-def load_service_config(path: str | Path | None = None) -> ServiceConfig:
+def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfig:
     """Load service configuration from a TOML file or environment."""
 
     explicit_path = Path(path) if path else None

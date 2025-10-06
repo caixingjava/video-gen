@@ -16,7 +16,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, List, Sequence
+from typing import Callable, Iterable, List, Optional, Sequence
 
 __all__ = ["main", "plan_commands", "Preset", "PRESETS"]
 
@@ -164,7 +164,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> None:
+def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
     args.func(args)

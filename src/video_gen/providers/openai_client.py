@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Iterable, List
+from typing import Iterable, List, Optional, Union
 
 from openai import OpenAI
 
@@ -81,7 +81,7 @@ class OpenAIWorkflowClient:
             raise OpenAIWorkflowError("Failed to decode JSON from OpenAI response") from exc
 
     @staticmethod
-    def _seconds_to_delta(value: float | int) -> timedelta:
+    def _seconds_to_delta(value: Union[float, int]) -> timedelta:
         return timedelta(seconds=float(value))
 
     # ----- Script -------------------------------------------------------------------
@@ -272,7 +272,7 @@ class OpenAIWorkflowClient:
 
     # ----- Image generation ---------------------------------------------------------
     def generate_dalle_image(
-        self, shot_id: str, prompt: str, negative_prompt: str | None = None
+        self, shot_id: str, prompt: str, negative_prompt: Optional[str] = None
     ) -> VisualAsset:
         response = self._client.images.generate(
             model=self._image_model,

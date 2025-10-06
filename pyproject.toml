@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "AI-driven workflow for generating historical figure videos"
 authors = [{name = "AI"}]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
     "fastapi>=0.110",
     "pydantic>=2.6",
