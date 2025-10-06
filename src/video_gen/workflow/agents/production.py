@@ -18,7 +18,12 @@ from ..models import (
 )
 from .base import AssetAgent, CameraAgent, ScriptAgent, SynthesisAgent, TimelineAgent, VisualPlannerAgent
 from ...config import ServiceConfig
-from ...providers import FreesoundClient, MubertClient, OpenAIWorkflowClient, XunfeiTTSClient
+from ...providers import (
+    DashscopeMusicClient,
+    FreesoundClient,
+    OpenAIWorkflowClient,
+    XunfeiTTSClient,
+)
 
 
 class OpenAIScriptAgent(ScriptAgent):
@@ -78,12 +83,12 @@ class ExternalSynthesisAgent(SynthesisAgent):
     def __init__(
         self,
         tts_client: XunfeiTTSClient,
-        mubert_client: MubertClient,
+        music_client: DashscopeMusicClient,
         freesound_client: FreesoundClient,
         output_dir: Path,
     ) -> None:
         self._tts = tts_client
-        self._mubert = mubert_client
+        self._music = music_client
         self._freesound = freesound_client
         self._output_dir = output_dir
 
@@ -101,7 +106,9 @@ class ExternalSynthesisAgent(SynthesisAgent):
     def run(self, context: TaskContext, timeline: List[TimelineEntry]) -> FinalAssets:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         narration_files = self._render_narration(context, timeline)
-        bgm_path = self._mubert.generate_track(context.persona, self._output_dir / f"{context.task_id}_bgm.mp3")
+        bgm_path = self._music.generate_track(
+            context.persona, self._output_dir / f"{context.task_id}_bgm.mp3"
+        )
         ambience_path = self._freesound.download_preview(self._output_dir / f"{context.task_id}_ambience.mp3")
 
         video_placeholder = self._output_dir / f"{context.task_id}.mp4"
@@ -152,19 +159,24 @@ def _format_timestamp(total_seconds: float) -> str:
 def create_production_agents(config: ServiceConfig):
     """Factory that builds the production agents using configured services."""
 
-    if not config.openai or not config.xunfei or not config.mubert or not config.freesound:
+    if (
+        not config.openai
+        or not config.xunfei
+        or not config.dashscope_music
+        or not config.freesound
+    ):
         missing = [
             name
             for name, value in {
                 "openai": config.openai,
                 "xunfei": config.xunfei,
-                "mubert": config.mubert,
+                "dashscope_music": config.dashscope_music,
                 "freesound": config.freesound,
             }.items()
             if value is None
         ]
         raise RuntimeError(
-            "Production agents require OpenAI, Xunfei, Mubert and Freesound settings. "
+            "Production agents require OpenAI, Xunfei, DashScope music and Freesound settings. "
             f"Missing: {', '.join(missing)}"
         )
 
@@ -177,9 +189,11 @@ def create_production_agents(config: ServiceConfig):
 
     output_dir = Path(config.storage.output_dir)
     tts_client = XunfeiTTSClient(config.xunfei)
-    mubert_client = MubertClient(config.mubert)
+    music_client = DashscopeMusicClient(config.dashscope_music)
     freesound_client = FreesoundClient(config.freesound)
-    synthesis_agent = ExternalSynthesisAgent(tts_client, mubert_client, freesound_client, output_dir)
+    synthesis_agent = ExternalSynthesisAgent(
+        tts_client, music_client, freesound_client, output_dir
+    )
 
     return (
         script_agent,

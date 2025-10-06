@@ -2,12 +2,12 @@
 
 from .openai_client import OpenAIWorkflowClient
 from .xunfei import XunfeiTTSClient
-from .mubert import MubertClient
+from .dashscope_music import DashscopeMusicClient
 from .freesound import FreesoundClient
 
 __all__ = [
     "OpenAIWorkflowClient",
     "XunfeiTTSClient",
-    "MubertClient",
+    "DashscopeMusicClient",
     "FreesoundClient",
 ]

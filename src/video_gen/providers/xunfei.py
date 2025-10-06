@@ -1,4 +1,4 @@
-"""Client for the Xunfei (iFlytek) TTS WebAPI."""
+"""Client for the Xunfei (iFlytek) Text-to-Speech WebAPI v2 service."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from ..config import XunfeiSettings
 
 
 class XunfeiTTSClient:
-    """Minimal wrapper around the official Xunfei TTS REST API."""
+    """Minimal wrapper around the official Xunfei Text-to-Speech WebAPI v2 REST API."""
 
     API_URL = "https://tts-api.xfyun.cn/v2/tts"
 

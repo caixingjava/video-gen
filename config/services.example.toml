@@ -12,7 +12,7 @@ image_model = "gpt-image-1"
 temperature = 0.3
 
 [xunfei_tts]
-# Xunfei (iFlytek) WebAPI credentials
+# Credentials for the Xunfei (iFlytek) Text-to-Speech WebAPI v2 service
 # 申请地址：https://www.xfyun.cn/services/online_tts
 app_id = ""
 api_key = ""
@@ -21,11 +21,12 @@ voice = "xiaoyan"
 format = "mp3"
 speed = 50
 
-[mubert]
-# API key retrieved from https://mubert.com/
-# 申请地址：https://mubert.com/render/pricing
+[dashscope_music]
+# 阿里云 DashScope 音乐生成配置
+# 申请地址：https://dashscope.aliyuncs.com/
 api_key = ""
-playlist = "cinematic"
+model = "text-to-music-001"
+style = "中国古风"
 duration_seconds = 120
 
 [freesound]

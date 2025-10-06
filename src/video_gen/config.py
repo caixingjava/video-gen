@@ -38,9 +38,10 @@ class XunfeiSettings:
 
 
 @dataclass
-class MubertSettings:
+class DashscopeMusicSettings:
     api_key: str
-    playlist: str = "cinematic"
+    model: str = "text-to-music-001"
+    style: str = "中国古风"
     duration_seconds: int = 120
 
 
@@ -60,7 +61,7 @@ class StorageSettings:
 class ServiceConfig:
     openai: Optional[OpenAISettings] = None
     xunfei: Optional[XunfeiSettings] = None
-    mubert: Optional[MubertSettings] = None
+    dashscope_music: Optional[DashscopeMusicSettings] = None
     freesound: Optional[FreesoundSettings] = None
     storage: StorageSettings = field(default_factory=StorageSettings)
 
@@ -120,12 +121,14 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
             }
             if _coalesce(os.environ.get("XUNFEI_APP_ID"))
             else None,
-            "mubert": {
-                "api_key": _coalesce(os.environ.get("MUBERT_API_KEY")),
-                "playlist": _coalesce(os.environ.get("MUBERT_PLAYLIST")) or "cinematic",
-                "duration_seconds": int(os.environ.get("MUBERT_DURATION", 120)),
+            "dashscope_music": {
+                "api_key": _coalesce(os.environ.get("DASHSCOPE_API_KEY")),
+                "model": _coalesce(os.environ.get("DASHSCOPE_MUSIC_MODEL"))
+                or "text-to-music-001",
+                "style": _coalesce(os.environ.get("DASHSCOPE_MUSIC_STYLE")) or "中国古风",
+                "duration_seconds": int(os.environ.get("DASHSCOPE_MUSIC_DURATION", 120)),
             }
-            if _coalesce(os.environ.get("MUBERT_API_KEY"))
+            if _coalesce(os.environ.get("DASHSCOPE_API_KEY"))
             else None,
             "freesound": {
                 "api_key": _coalesce(os.environ.get("FREESOUND_API_KEY")),
@@ -153,9 +156,9 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         if "xunfei_tts" in data
         else None
     )
-    mubert_settings = (
-        _parse_section(data["mubert"], MubertSettings)
-        if "mubert" in data
+    dashscope_settings = (
+        _parse_section(data["dashscope_music"], DashscopeMusicSettings)
+        if "dashscope_music" in data
         else None
     )
     freesound_settings = (
@@ -168,7 +171,7 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
     return ServiceConfig(
         openai=openai_settings,
         xunfei=xunfei_settings,
-        mubert=mubert_settings,
+        dashscope_music=dashscope_settings,
         freesound=freesound_settings,
         storage=storage_settings,
     )
@@ -178,7 +181,7 @@ __all__ = [
     "ConfigurationError",
     "OpenAISettings",
     "XunfeiSettings",
-    "MubertSettings",
+    "DashscopeMusicSettings",
     "FreesoundSettings",
     "StorageSettings",
     "ServiceConfig",

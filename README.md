@@ -16,7 +16,7 @@
 - 一组确定性的 Dummy Agent，便于端到端跑通流程和后续替换为真实大模型调用。
 - **生产级外部服务集成**：
   - 剧本/分镜/运镜/时间线全部使用 OpenAI 大模型（含 DALL·E 3 图像生成）。
-  - 讯飞 TTS 负责配音合成，Mubert 自动生成背景音乐，Freesound 提供环境音效。
+  - 讯飞 TTS 负责配音合成，阿里云 DashScope 音乐生成（text-to-music）提供符合中国风格的背景音乐，Freesound 提供环境音效。
 - FastAPI 原型接口，可创建任务并查询生成结果。
 
 ## 快速开始
@@ -52,8 +52,8 @@ cp config/services.example.toml config/services.toml
 
 2. 按需填写以下字段（示例文件中已标注申请地址）：
    - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。
-   - **讯飞 TTS**：在科大讯飞开放平台 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
-   - **Mubert**：在 <https://mubert.com/render/pricing> 注册并申请 API Key。
+  - **讯飞 TTS**：使用科大讯飞“在线语音合成（Text-to-Speech WebAPI v2）”能力，在 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
+  - **阿里云 DashScope 音乐生成**：在 <https://dashscope.aliyuncs.com/> 注册并开通「音频生成·音乐创作」能力，申请 API Key。
    - **Freesound**：登录 <https://freesound.org/apiv2/app/> 创建应用以获得个人 Token。
 
 3. 编辑 `config/services.toml` 将上述凭证写入对应字段。若更倾向使用环境变量，也可以导出：
@@ -63,7 +63,9 @@ export OPENAI_API_KEY=sk-...
 export XUNFEI_APP_ID=...
 export XUNFEI_API_KEY=...
 export XUNFEI_API_SECRET=...
-export MUBERT_API_KEY=...
+export DASHSCOPE_API_KEY=...
+export DASHSCOPE_MUSIC_MODEL=text-to-music-001
+export DASHSCOPE_MUSIC_STYLE="中国古风"
 export FREESOUND_API_KEY=...
 ```
 
