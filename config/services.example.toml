@@ -1,0 +1,42 @@
+[openai]
+# OpenAI API key used for LLM and DALL·E 3 requests
+# 申请地址：https://platform.openai.com/account/api-keys
+api_key = "sk-your-key"
+# Optional custom base url, leave empty to use the default api.openai.com endpoint
+base_url = ""
+# Chat/completions model used for workflow reasoning
+model = "gpt-4o-mini"
+# DALL·E 3 compatible image model identifier
+image_model = "gpt-image-1"
+# Optional temperature override (0-2). Lower keeps outputs deterministic.
+temperature = 0.3
+
+[xunfei_tts]
+# Credentials for the Xunfei (iFlytek) Text-to-Speech WebAPI v2 service
+# 申请地址：https://www.xfyun.cn/services/online_tts
+app_id = ""
+api_key = ""
+api_secret = ""
+voice = "xiaoyan"
+format = "mp3"
+speed = 50
+
+[dashscope_music]
+# 阿里云 DashScope 音乐生成配置
+# 申请地址：https://dashscope.aliyun.com/
+api_key = ""
+model = "text-to-music-001"
+style = "中国古风"
+duration_seconds = 120
+
+[dashscope_ambience]
+# 阿里云 DashScope 环境音效配置（同样使用音频生成能力，可与音乐共用密钥）
+# 申请地址：https://dashscope.aliyun.com/
+api_key = ""
+model = "text-to-music-001"
+style = "中国场景环境音"
+duration_seconds = 45
+
+[storage]
+# Directory where synthesized media will be stored
+output_dir = "./var/output"
