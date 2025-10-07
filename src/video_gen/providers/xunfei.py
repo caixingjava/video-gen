@@ -21,7 +21,7 @@ class XunfeiTTSClient:
 
     def __init__(self, settings: XunfeiSettings, *, timeout: float = 60.0) -> None:
         self._settings = settings
-        self._client = httpx.Client(timeout=timeout)
+        self._client = httpx.Client(timeout=timeout, trust_env=True)
 
     def synthesize(self, text: str, output_path: Path) -> Path:
         """Synthesize the provided text into an audio file."""
