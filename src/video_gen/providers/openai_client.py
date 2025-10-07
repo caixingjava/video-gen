@@ -8,8 +8,15 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Iterable, List, Optional, Union
 
-import httpx
-from openai import OpenAI
+try:  # pragma: no cover - import is exercised indirectly in tests
+    import httpx
+except ModuleNotFoundError:  # pragma: no cover - fallback when optional dependency missing
+    httpx = None  # type: ignore[assignment]
+
+try:  # pragma: no cover - import is exercised indirectly in tests
+    from openai import OpenAI
+except ModuleNotFoundError:  # pragma: no cover - fallback when optional dependency missing
+    OpenAI = None  # type: ignore[assignment]
 
 from ..config import OpenAISettings
 from ..workflow.models import (
@@ -54,6 +61,11 @@ class OpenAIWorkflowClient:
     """Wrapper around the OpenAI client to produce structured workflow outputs."""
 
     def __init__(self, settings: OpenAISettings) -> None:
+        if OpenAI is None:
+            raise OpenAIWorkflowError(
+                "openai is required to communicate with the OpenAI API. Install the 'openai' package."
+            )
+
         kwargs = {"api_key": settings.api_key}
         if settings.base_url:
             kwargs["base_url"] = settings.base_url
@@ -63,9 +75,17 @@ class OpenAIWorkflowClient:
         if settings.proxy:
             http_client_kwargs["proxies"] = settings.proxy
         if settings.timeout_seconds is not None:
+            if httpx is None:
+                raise OpenAIWorkflowError(
+                    "httpx is required to configure timeout settings. Install the 'httpx' package."
+                )
             http_client_kwargs["timeout"] = httpx.Timeout(settings.timeout_seconds)
         if settings.verify is not None:
             http_client_kwargs["verify"] = settings.verify
+        if httpx is None:
+            raise OpenAIWorkflowError(
+                "httpx is required to communicate with the OpenAI API. Install the 'httpx' package."
+            )
         http_client = httpx.Client(**http_client_kwargs)
         self._client = OpenAI(http_client=http_client, **kwargs)
         self._model = settings.model
