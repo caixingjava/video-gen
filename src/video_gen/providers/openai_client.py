@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Iterable, List, Optional, Union
@@ -46,6 +47,9 @@ class TimelineResult:
     entries: List[TimelineEntry]
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class OpenAIWorkflowClient:
     """Wrapper around the OpenAI client to produce structured workflow outputs."""
 
@@ -76,15 +80,22 @@ class OpenAIWorkflowClient:
     def _create_json_completion(self, system_prompt: str, user_content: str) -> dict:
         if "json" not in system_prompt.lower():
             system_prompt = f"{system_prompt.strip()} Respond with valid JSON."
-        response = self._client.chat.completions.create(
-            model=self._model,
-            temperature=self._temperature,
-            response_format={"type": "json_object"},
-            messages=[
+        request_payload = {
+            "model": self._model,
+            "temperature": self._temperature,
+            "response_format": {"type": "json_object"},
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content},
             ],
-        )
+        }
+        LOGGER.info("Calling OpenAI chat completion with payload: %s", request_payload)
+        response = self._client.chat.completions.create(**request_payload)
+        try:
+            response_payload = response.model_dump()
+        except AttributeError:  # pragma: no cover - defensive
+            response_payload = str(response)
+        LOGGER.info("Received OpenAI response: %s", response_payload)
         content = response.choices[0].message.content
         if not content:
             raise OpenAIWorkflowError("OpenAI returned empty content")
