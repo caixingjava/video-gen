@@ -116,16 +116,35 @@ class OpenAIWorkflowClient:
             }
         )
         data = self._create_json_completion(system_prompt, user_prompt)
+        sections = self._parse_script_sections(data)
+        if not sections:
+            raise OpenAIWorkflowError("Script generation returned no sections")
+        return ScriptResult(sections=sections)
+
+    @staticmethod
+    def _parse_script_sections(data: dict) -> List[ScriptSection]:
+        """Normalise the OpenAI response into ``ScriptSection`` instances."""
+
+        fallback_summaries: List[str] = []
+
         sections_payload = data.get("sections")
         if not sections_payload and isinstance(data.get("script"), dict):
             sections_payload = data["script"].get("sections")
 
         # Some models occasionally nest the sections payload or return it as a JSON
-        # string. Normalise the value into an iterable of dictionaries.
+        # string. Normalise the value into an iterable of dictionaries. When a
+        # plain string is returned we keep the text as a fallback summary.
         if isinstance(sections_payload, str):
-            try:
-                sections_payload = json.loads(sections_payload)
-            except json.JSONDecodeError:  # pragma: no cover - defensive
+            normalised_str = sections_payload.strip()
+            if normalised_str:
+                try:
+                    sections_payload = json.loads(normalised_str)
+                except json.JSONDecodeError:  # pragma: no cover - defensive
+                    fallback_summaries.extend(
+                        OpenAIWorkflowClient._split_text(normalised_str)
+                    )
+                    sections_payload = []
+            else:
                 sections_payload = []
         if isinstance(sections_payload, dict):
             sections_payload = list(sections_payload.values())
@@ -134,6 +153,9 @@ class OpenAIWorkflowClient:
 
         sections: List[ScriptSection] = []
         for item in sections_payload:
+            if isinstance(item, str):
+                fallback_summaries.extend(OpenAIWorkflowClient._split_text(item))
+                continue
             if not isinstance(item, dict):
                 continue
             citations = item.get("citations", []) or []
@@ -149,9 +171,92 @@ class OpenAIWorkflowClient:
                     citations=[str(c) for c in citations],
                 )
             )
-        if not sections:
-            raise OpenAIWorkflowError("Script generation returned no sections")
-        return ScriptResult(sections=sections)
+
+        if sections:
+            return sections
+
+        # Fall back to any textual summary that the model may have returned to
+        # avoid failing the entire workflow when the structure is slightly off.
+        fallback_candidates: List[str] = list(fallback_summaries)
+        fallback_candidates.extend(
+            OpenAIWorkflowClient._extract_textual_candidates(data.get("script"))
+        )
+        fallback_candidates.extend(
+            OpenAIWorkflowClient._extract_textual_candidates(data.get("summary"))
+        )
+        fallback_candidates.extend(
+            OpenAIWorkflowClient._extract_textual_candidates(data.get("content"))
+        )
+        fallback_candidates.extend(
+            OpenAIWorkflowClient._extract_textual_candidates(data.get("narrative"))
+        )
+        fallback_candidates.extend(
+            OpenAIWorkflowClient._extract_textual_candidates(data.get("response"))
+        )
+
+        normalised_fallbacks: List[str] = []
+        for candidate in fallback_candidates:
+            text = candidate.strip()
+            if not text or text in normalised_fallbacks:
+                continue
+            normalised_fallbacks.append(text)
+
+        return [
+            ScriptSection(
+                section=f"section_{index + 1}",
+                timeframe="",
+                summary=summary,
+                citations=[],
+            )
+            for index, summary in enumerate(normalised_fallbacks[:3])
+        ]
+
+    @staticmethod
+    def _split_text(value: str) -> List[str]:
+        normalized = value.strip()
+        if not normalized:
+            return []
+        paragraphs = [
+            part.strip()
+            for part in normalized.replace("\r\n", "\n").split("\n\n")
+            if part.strip()
+        ]
+        if len(paragraphs) > 1:
+            return paragraphs
+        # Fallback to splitting on single newlines when double-newlines are not
+        # present. This keeps bullet lists as individual sections.
+        single_lines = [
+            part.strip()
+            for part in normalized.split("\n")
+            if part.strip()
+        ]
+        return single_lines or [normalized]
+
+    @staticmethod
+    def _extract_textual_candidates(value: Optional[object]) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return OpenAIWorkflowClient._split_text(value)
+        if isinstance(value, list):
+            results: List[str] = []
+            for item in value:
+                results.extend(OpenAIWorkflowClient._extract_textual_candidates(item))
+            return results
+        if isinstance(value, dict):
+            results: List[str] = []
+            for key in ("summary", "content", "text", "body", "narrative"):
+                if key in value:
+                    results.extend(
+                        OpenAIWorkflowClient._extract_textual_candidates(value[key])
+                    )
+            if not results:
+                for item in value.values():
+                    results.extend(
+                        OpenAIWorkflowClient._extract_textual_candidates(item)
+                    )
+            return results
+        return []
 
     # ----- Storyboard ---------------------------------------------------------------
     def generate_storyboard(self, persona: str, script: Iterable[ScriptSection]) -> StoryboardResult:
