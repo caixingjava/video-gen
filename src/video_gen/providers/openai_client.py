@@ -95,6 +95,11 @@ class OpenAIWorkflowClient:
             response_payload = response.model_dump()
         except AttributeError:  # pragma: no cover - defensive
             response_payload = str(response)
+        except Exception:  # pragma: no cover - defensive
+            try:
+                response_payload = response.model_dump_json()
+            except Exception:
+                response_payload = str(response)
         LOGGER.info("Received OpenAI response: %s", response_payload)
         content = response.choices[0].message.content
         if not content:
