@@ -19,3 +19,6 @@ dependencies = [
     "tomli; python_version < '3.11'",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
