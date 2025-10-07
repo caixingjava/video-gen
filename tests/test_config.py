@@ -28,10 +28,16 @@ api_key = "dashscope-ambience-key"
 [deepseek]
 api_key = "deepseek-key"
 model = "deepseek-chat"
+timeout_seconds = 45
+trust_env = false
+verify = false
 
 [doubao]
 api_key = "doubao-key"
 model = "doubao-vision"
+timeout_seconds = 30
+trust_env = true
+verify = false
 
 [text_generation]
 provider = "deepseek"
@@ -50,7 +56,13 @@ output_dir = "/tmp/output"
     assert config.dashscope_music is not None
     assert config.dashscope_ambience is not None
     assert config.deepseek is not None
+    assert config.deepseek.timeout_seconds == 45
+    assert config.deepseek.trust_env is False
+    assert config.deepseek.verify is False
     assert config.doubao is not None
+    assert config.doubao.timeout_seconds == 30
+    assert config.doubao.trust_env is True
+    assert config.doubao.verify is False
     assert config.text_generation.provider == "deepseek"
     assert config.image_generation.provider == "doubao"
     assert config.storage.output_dir == "/tmp/output"

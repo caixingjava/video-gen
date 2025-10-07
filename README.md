@@ -54,8 +54,8 @@ cp config/services.example.toml config/services.toml
     - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。
     - **讯飞 TTS**：使用科大讯飞“在线语音合成（Text-to-Speech WebAPI v2）”能力，在 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
     - **阿里云 DashScope 音乐生成 / 环境音效**：在 <https://dashscope.aliyun.com/> 注册并开通音频生成能力，单一 API Key 既可用于背景音乐，也可用于生成环境音效。
-    - **DeepSeek**（可选）：在 <https://platform.deepseek.com/> 申请 API Key，按需配置自定义 `base_url`、模型与温度，用于人物传记初稿的 LLM 推理。
-    - **豆包图像生成**（可选）：在 <https://www.volcengine.com/product/doubao> 申请火山引擎豆包 API Key，可指定独立 `base_url`、模型与负面提示词，用于角色立绘生成。
+    - **DeepSeek**（可选）：在 <https://platform.deepseek.com/> 申请 API Key，按需配置自定义 `base_url`、模型、温度，以及网络相关的 `timeout_seconds`、`trust_env`（是否继承系统代理）或 `verify`（证书校验/自签路径），用于人物传记初稿的 LLM 推理。
+    - **豆包图像生成**（可选）：在 <https://www.volcengine.com/product/doubao> 申请火山引擎豆包 API Key，可指定独立 `base_url`、模型、负面提示词，以及 `timeout_seconds`、`trust_env`/`verify` 等网络字段，用于角色立绘生成。
 
 3. 编辑 `config/services.toml` 将上述凭证写入对应字段。若更倾向使用环境变量，也可以导出：
 
@@ -74,15 +74,23 @@ export DEEPSEEK_API_KEY=sk-deepseek...
 export DEEPSEEK_BASE_URL=""  # 可选，默认为官方 SaaS 地址
 export DEEPSEEK_MODEL="deepseek-chat"
 export DEEPSEEK_TEMPERATURE=0.3
+export DEEPSEEK_TIMEOUT_SECONDS=60
+export DEEPSEEK_TRUST_ENV=true         # 默认即为 true，显式写出便于在部分网络禁用代理
+export DEEPSEEK_VERIFY=true            # 也可指定 false 或 CA 证书路径
 export DOUBAO_API_KEY=sk-doubao...
 export DOUBAO_BASE_URL=""  # 可选，默认为官方 SaaS 地址
 export DOUBAO_MODEL="doubao-vision"
 export DOUBAO_NEGATIVE_PROMPT=""
+export DOUBAO_TIMEOUT_SECONDS=60
+export DOUBAO_TRUST_ENV=true
+export DOUBAO_VERIFY=true
 export TEXT_GENERATION_PROVIDER=openai  # 可切换为 deepseek
 export IMAGE_GENERATION_PROVIDER=openai  # 可切换为 doubao
 ```
 
 未填写或缺失凭证时，系统会自动回退到内置的 Dummy Agent，便于在无真实账号的情况下进行流程验证。
+
+> 💡 如果部署在需要通过企业代理访问外网的环境，保持 `trust_env=true`（默认值）即可让 DeepSeek / 豆包客户端继承系统级代理设置；若代理会替换证书，可设置 `verify=false` 或提供内部 CA 证书路径以避免握手超时。
 
 如需切换工作流使用的服务，可在 `config/services.toml` 中的 `[text_generation]` 与 `[image_generation]` 模块调整 `provider` 字段：
 

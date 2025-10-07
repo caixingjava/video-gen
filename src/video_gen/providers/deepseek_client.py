@@ -60,10 +60,21 @@ class DeepSeekWorkflowClient:
             "Authorization": f"Bearer {self._settings.api_key}",
             "Content-Type": "application/json",
         }
-        with httpx.Client(timeout=httpx.Timeout(60.0)) as client:
-            response = client.post(self._endpoint, json=payload, headers=headers)
-            response.raise_for_status()
-            data = response.json()
+        client_kwargs = {
+            "timeout": httpx.Timeout(self._settings.timeout_seconds),
+            "trust_env": self._settings.trust_env,
+        }
+        if self._settings.verify is not None:
+            client_kwargs["verify"] = self._settings.verify
+        try:
+            with httpx.Client(**client_kwargs) as client:
+                response = client.post(self._endpoint, json=payload, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise DeepSeekWorkflowError(
+                f"Failed to call DeepSeek API: {exc}"  # pragma: no cover - network failure
+            ) from exc
         choices = data.get("choices") or []
         if not choices:
             raise DeepSeekWorkflowError("DeepSeek returned no choices")
