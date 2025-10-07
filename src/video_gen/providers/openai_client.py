@@ -74,6 +74,8 @@ class OpenAIWorkflowClient:
 
     # ----- Helpers -----------------------------------------------------------------
     def _create_json_completion(self, system_prompt: str, user_content: str) -> dict:
+        if "json" not in system_prompt.lower():
+            system_prompt = f"{system_prompt.strip()} Respond with valid JSON."
         response = self._client.chat.completions.create(
             model=self._model,
             temperature=self._temperature,
@@ -100,7 +102,8 @@ class OpenAIWorkflowClient:
         system_prompt = (
             "You are an expert documentary writer. "
             "Produce a concise script about a historical figure strictly in chronological order. "
-            "Always include citations referencing credible sources."
+            "Always include citations referencing credible sources. "
+            "Respond with a JSON object matching the requested structure."
         )
         user_prompt = json.dumps(
             {
