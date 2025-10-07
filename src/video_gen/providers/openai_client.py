@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Iterable, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 
 try:  # pragma: no cover - import is exercised indirectly in tests
     import httpx
@@ -121,7 +121,7 @@ class OpenAIWorkflowClient:
             except Exception:
                 response_payload = str(response)
         LOGGER.info("Received OpenAI response: %s", response_payload)
-        content = response.choices[0].message.content
+        content = self._extract_message_content(response.choices[0].message)
         if not content:
             raise OpenAIWorkflowError("OpenAI returned empty content")
         try:
@@ -132,6 +132,89 @@ class OpenAIWorkflowClient:
     @staticmethod
     def _seconds_to_delta(value: Union[float, int]) -> timedelta:
         return timedelta(seconds=float(value))
+
+    @staticmethod
+    def _normalise_message_content(content: Any) -> str:
+        if isinstance(content, str):
+            return content.strip()
+
+        if isinstance(content, list):
+            parts: List[str] = []
+            for part in content:
+                if part is None:
+                    continue
+                if isinstance(part, str):
+                    parts.append(part)
+                    continue
+                if isinstance(part, dict):
+                    text_value = part.get("text")
+                    if isinstance(text_value, str):
+                        parts.append(text_value)
+                        continue
+                    nested_content = part.get("content")
+                    if isinstance(nested_content, str):
+                        parts.append(nested_content)
+                    elif nested_content is not None:
+                        try:
+                            parts.append(json.dumps(nested_content, ensure_ascii=False))
+                        except TypeError:  # pragma: no cover - defensive
+                            parts.append(str(nested_content))
+                    continue
+                text_attr = getattr(part, "text", None)
+                if isinstance(text_attr, str):
+                    parts.append(text_attr)
+                    continue
+                content_attr = getattr(part, "content", None)
+                if isinstance(content_attr, str):
+                    parts.append(content_attr)
+            return "".join(parts).strip()
+
+        if isinstance(content, dict):
+            text_value = content.get("text")
+            if isinstance(text_value, str):
+                return text_value.strip()
+            nested_content = content.get("content")
+            if isinstance(nested_content, str):
+                return nested_content.strip()
+            if nested_content is not None:
+                try:
+                    return json.dumps(nested_content, ensure_ascii=False)
+                except TypeError:  # pragma: no cover - defensive
+                    return str(nested_content)
+
+        return ""
+
+    @staticmethod
+    def _extract_message_content(message: Any) -> str:
+        if message is None:
+            return ""
+
+        content = OpenAIWorkflowClient._normalise_message_content(
+            getattr(message, "content", None)
+        )
+        if content:
+            return content
+
+        for attr in ("model_dump", "dict"):
+            if hasattr(message, attr):
+                try:
+                    payload = getattr(message, attr)()
+                except Exception:  # pragma: no cover - defensive
+                    continue
+                payload_content = OpenAIWorkflowClient._normalise_message_content(
+                    payload.get("content") if isinstance(payload, dict) else None
+                )
+                if payload_content:
+                    return payload_content
+
+        text_attr = getattr(message, "text", None)
+        if isinstance(text_attr, str):
+            return text_attr.strip()
+
+        raw_content = getattr(message, "content", None)
+        if raw_content is None:
+            return ""
+        return str(raw_content).strip()
 
     # ----- Script -------------------------------------------------------------------
     def generate_script(self, persona: str) -> ScriptResult:
