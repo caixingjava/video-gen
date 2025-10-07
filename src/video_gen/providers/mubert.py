@@ -18,7 +18,7 @@ class MubertClient:
 
     def __init__(self, settings: MubertSettings, *, timeout: float = 60.0) -> None:
         self._settings = settings
-        self._client = httpx.Client(timeout=timeout)
+        self._client = httpx.Client(timeout=timeout, trust_env=True)
 
     def generate_track(self, persona: str, output_path: Path) -> Path:
         payload = {
