@@ -59,11 +59,47 @@ class StorageSettings:
 
 
 @dataclass
+class DeepSeekSettings:
+    api_key: str
+    model: str = "deepseek-chat"
+    base_url: Optional[str] = None
+    temperature: float = 0.3
+    timeout_seconds: float = 60.0
+    trust_env: bool = True
+    verify: Optional[Union[str, bool]] = None
+
+
+@dataclass
+class DoubaoSettings:
+    api_key: str
+    model: str = "doubao-vision"
+    base_url: Optional[str] = None
+    negative_prompt: Optional[str] = None
+    timeout_seconds: float = 60.0
+    trust_env: bool = True
+    verify: Optional[Union[str, bool]] = None
+
+
+@dataclass
+class TextGenerationSettings:
+    provider: str = "openai"
+
+
+@dataclass
+class ImageGenerationSettings:
+    provider: str = "openai"
+
+
+@dataclass
 class ServiceConfig:
     openai: Optional[OpenAISettings] = None
     xunfei: Optional[XunfeiSettings] = None
     dashscope_music: Optional[DashscopeMusicSettings] = None
     dashscope_ambience: Optional[DashscopeAmbienceSettings] = None
+    deepseek: Optional[DeepSeekSettings] = None
+    doubao: Optional[DoubaoSettings] = None
+    text_generation: TextGenerationSettings = field(default_factory=TextGenerationSettings)
+    image_generation: ImageGenerationSettings = field(default_factory=ImageGenerationSettings)
     storage: StorageSettings = field(default_factory=StorageSettings)
 
 
@@ -72,6 +108,19 @@ def _coalesce(value: Any) -> Optional[str]:
         value = value.strip()
         return value or None
     return value
+
+
+def _parse_bool(value: Optional[str]) -> Optional[bool]:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized in {"true", "1", "yes", "on"}:
+        return True
+    if normalized in {"false", "0", "no", "off"}:
+        return False
+    raise ConfigurationError(f"Invalid boolean value: {value}")
 
 
 def _parse_section(data: dict[str, Any], cls: type[Any]) -> Any:
@@ -102,56 +151,111 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))
     else:
         # Allow configuration purely via environment variables.
-        data = {
-            "openai": {
-                "api_key": _coalesce(os.environ.get("OPENAI_API_KEY")),
+        data = {}
+
+        openai_api_key = _coalesce(os.environ.get("OPENAI_API_KEY"))
+        if openai_api_key:
+            data["openai"] = {
+                "api_key": openai_api_key,
                 "base_url": _coalesce(os.environ.get("OPENAI_BASE_URL")),
                 "model": _coalesce(os.environ.get("OPENAI_MODEL")) or "gpt-4o-mini",
                 "image_model": _coalesce(os.environ.get("OPENAI_IMAGE_MODEL")) or "gpt-image-1",
                 "temperature": float(os.environ.get("OPENAI_TEMPERATURE", 0.3)),
             }
-            if _coalesce(os.environ.get("OPENAI_API_KEY"))
-            else None,
-            "xunfei_tts": {
-                "app_id": _coalesce(os.environ.get("XUNFEI_APP_ID")),
+
+        xunfei_app_id = _coalesce(os.environ.get("XUNFEI_APP_ID"))
+        if xunfei_app_id:
+            data["xunfei_tts"] = {
+                "app_id": xunfei_app_id,
                 "api_key": _coalesce(os.environ.get("XUNFEI_API_KEY")),
                 "api_secret": _coalesce(os.environ.get("XUNFEI_API_SECRET")),
                 "voice": _coalesce(os.environ.get("XUNFEI_VOICE")) or "xiaoyan",
                 "format": _coalesce(os.environ.get("XUNFEI_FORMAT")) or "mp3",
                 "speed": int(os.environ.get("XUNFEI_SPEED", 50)),
             }
-            if _coalesce(os.environ.get("XUNFEI_APP_ID"))
-            else None,
-            "dashscope_music": {
-                "api_key": _coalesce(os.environ.get("DASHSCOPE_API_KEY")),
+
+        dashscope_api_key = _coalesce(os.environ.get("DASHSCOPE_API_KEY"))
+        if dashscope_api_key:
+            data["dashscope_music"] = {
+                "api_key": dashscope_api_key,
                 "model": _coalesce(os.environ.get("DASHSCOPE_MUSIC_MODEL"))
                 or "text-to-music-001",
                 "style": _coalesce(os.environ.get("DASHSCOPE_MUSIC_STYLE")) or "中国古风",
                 "duration_seconds": int(os.environ.get("DASHSCOPE_MUSIC_DURATION", 120)),
             }
-            if _coalesce(os.environ.get("DASHSCOPE_API_KEY"))
-            else None,
-            "dashscope_ambience": {
-                "api_key": _coalesce(
-                    os.environ.get("DASHSCOPE_AMBIENCE_API_KEY")
-                    or os.environ.get("DASHSCOPE_API_KEY")
-                ),
+
+        dashscope_ambience_key = _coalesce(
+            os.environ.get("DASHSCOPE_AMBIENCE_API_KEY")
+            or os.environ.get("DASHSCOPE_API_KEY")
+        )
+        if dashscope_ambience_key:
+            data["dashscope_ambience"] = {
+                "api_key": dashscope_ambience_key,
                 "model": _coalesce(os.environ.get("DASHSCOPE_AMBIENCE_MODEL"))
                 or "text-to-music-001",
-                "style": _coalesce(os.environ.get("DASHSCOPE_AMBIENCE_STYLE")) or "中国场景环境音",
+                "style": _coalesce(os.environ.get("DASHSCOPE_AMBIENCE_STYLE"))
+                or "中国场景环境音",
                 "duration_seconds": int(os.environ.get("DASHSCOPE_AMBIENCE_DURATION", 45)),
             }
-            if _coalesce(
-                os.environ.get("DASHSCOPE_AMBIENCE_API_KEY")
-                or os.environ.get("DASHSCOPE_API_KEY")
-            )
-            else None,
-            "storage": {
-                "output_dir": _coalesce(os.environ.get("VIDEO_GEN_OUTPUT_DIR"))
-                or "./var/output",
-            },
+
+        deepseek_api_key = _coalesce(os.environ.get("DEEPSEEK_API_KEY"))
+        if deepseek_api_key:
+            deepseek_section: dict[str, Any] = {
+                "api_key": deepseek_api_key,
+                "base_url": _coalesce(os.environ.get("DEEPSEEK_BASE_URL")),
+                "model": _coalesce(os.environ.get("DEEPSEEK_MODEL")) or "deepseek-chat",
+                "temperature": float(os.environ.get("DEEPSEEK_TEMPERATURE", 0.3)),
+            }
+            timeout_value = _coalesce(os.environ.get("DEEPSEEK_TIMEOUT_SECONDS"))
+            if timeout_value:
+                deepseek_section["timeout_seconds"] = float(timeout_value)
+            trust_env_value = os.environ.get("DEEPSEEK_TRUST_ENV")
+            parsed_trust_env = _parse_bool(trust_env_value)
+            if parsed_trust_env is not None:
+                deepseek_section["trust_env"] = parsed_trust_env
+            verify_value = os.environ.get("DEEPSEEK_VERIFY")
+            if verify_value is not None:
+                try:
+                    parsed_verify = _parse_bool(verify_value)
+                except ConfigurationError:
+                    parsed_verify = verify_value
+                deepseek_section["verify"] = parsed_verify
+            data["deepseek"] = deepseek_section
+
+        doubao_api_key = _coalesce(os.environ.get("DOUBAO_API_KEY"))
+        if doubao_api_key:
+            doubao_section: dict[str, Any] = {
+                "api_key": doubao_api_key,
+                "base_url": _coalesce(os.environ.get("DOUBAO_BASE_URL")),
+                "model": _coalesce(os.environ.get("DOUBAO_MODEL")) or "doubao-vision",
+                "negative_prompt": _coalesce(os.environ.get("DOUBAO_NEGATIVE_PROMPT")),
+            }
+            timeout_value = _coalesce(os.environ.get("DOUBAO_TIMEOUT_SECONDS"))
+            if timeout_value:
+                doubao_section["timeout_seconds"] = float(timeout_value)
+            trust_env_value = os.environ.get("DOUBAO_TRUST_ENV")
+            parsed_trust_env = _parse_bool(trust_env_value)
+            if parsed_trust_env is not None:
+                doubao_section["trust_env"] = parsed_trust_env
+            verify_value = os.environ.get("DOUBAO_VERIFY")
+            if verify_value is not None:
+                try:
+                    parsed_verify = _parse_bool(verify_value)
+                except ConfigurationError:
+                    parsed_verify = verify_value
+                doubao_section["verify"] = parsed_verify
+            data["doubao"] = doubao_section
+
+        data["text_generation"] = {
+            "provider": _coalesce(os.environ.get("TEXT_GENERATION_PROVIDER")) or "openai",
         }
-        data = {k: v for k, v in data.items() if v is not None}
+        data["image_generation"] = {
+            "provider": _coalesce(os.environ.get("IMAGE_GENERATION_PROVIDER")) or "openai",
+        }
+        data["storage"] = {
+            "output_dir": _coalesce(os.environ.get("VIDEO_GEN_OUTPUT_DIR"))
+            or "./var/output",
+        }
 
     openai_settings = (
         _parse_section(data["openai"], OpenAISettings)
@@ -173,6 +277,22 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         if "dashscope_ambience" in data
         else None
     )
+    deepseek_settings = (
+        _parse_section(data["deepseek"], DeepSeekSettings)
+        if "deepseek" in data
+        else None
+    )
+    doubao_settings = (
+        _parse_section(data["doubao"], DoubaoSettings)
+        if "doubao" in data
+        else None
+    )
+    text_generation = _parse_section(
+        data.get("text_generation", {}), TextGenerationSettings
+    )
+    image_generation = _parse_section(
+        data.get("image_generation", {}), ImageGenerationSettings
+    )
     storage_settings = _parse_section(data.get("storage", {}), StorageSettings)
 
     return ServiceConfig(
@@ -180,6 +300,10 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
         xunfei=xunfei_settings,
         dashscope_music=dashscope_settings,
         dashscope_ambience=dashscope_ambience,
+        deepseek=deepseek_settings,
+        doubao=doubao_settings,
+        text_generation=text_generation,
+        image_generation=image_generation,
         storage=storage_settings,
     )
 
@@ -190,6 +314,10 @@ __all__ = [
     "XunfeiSettings",
     "DashscopeMusicSettings",
     "DashscopeAmbienceSettings",
+    "DeepSeekSettings",
+    "DoubaoSettings",
+    "TextGenerationSettings",
+    "ImageGenerationSettings",
     "StorageSettings",
     "ServiceConfig",
     "load_service_config",
