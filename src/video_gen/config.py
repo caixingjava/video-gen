@@ -25,6 +25,9 @@ class OpenAISettings:
     image_model: str = "gpt-image-1"
     base_url: Optional[str] = None
     temperature: float = 0.3
+    trust_env: bool = True
+    timeout_seconds: Optional[float] = None
+    verify: Optional[Union[str, bool]] = None
 
 
 @dataclass
