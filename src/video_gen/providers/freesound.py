@@ -17,7 +17,7 @@ class FreesoundClient:
 
     def __init__(self, settings: FreesoundSettings, *, timeout: float = 60.0) -> None:
         self._settings = settings
-        self._client = httpx.Client(timeout=timeout)
+        self._client = httpx.Client(timeout=timeout, trust_env=False)
 
     def _search(self) -> Optional[dict]:
         params = {

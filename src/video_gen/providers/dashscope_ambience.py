@@ -21,6 +21,7 @@ class DashscopeAmbienceClient:
         self._settings = settings
         self._client = httpx.Client(
             timeout=timeout,
+            trust_env=False,
             headers={
                 "Authorization": f"Bearer {settings.api_key}",
                 "Content-Type": "application/json",

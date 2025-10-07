@@ -4,12 +4,21 @@
 api_key = "sk-your-key"
 # Optional custom base url, leave empty to use the default api.openai.com endpoint
 base_url = ""
+# 本地代理地址：如果你的机器需要通过 Clash/Surge 等本地代理访问 OpenAI，请把它改成自己的端口；不需要代理就留空。
+# 支持 http(s) 与 socks5(h) 协议，例如 http://127.0.0.1:7890 或 socks5h://127.0.0.1:1080。
+proxy = "http://127.0.0.1:7890"
 # Chat/completions model used for workflow reasoning
 model = "gpt-4o-mini"
 # DALL·E 3 compatible image model identifier
 image_model = "gpt-image-1"
 # Optional temperature override (0-2). Lower keeps outputs deterministic.
 temperature = 0.3
+# 是否继承系统级代理/证书配置，默认关闭，避免和其他服务混用代理。
+trust_env = false
+# 单次请求的超时时间（秒），可根据网络情况调大，例如 120。
+timeout_seconds = 60
+# 证书校验设置：true/false 或者自定义 CA 证书路径（代理为自签证书时使用）。
+verify = true
 
 [xunfei_tts]
 # Credentials for the Xunfei (iFlytek) Text-to-Speech WebAPI v2 service
