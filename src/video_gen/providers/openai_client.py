@@ -244,50 +244,128 @@ class OpenAIWorkflowClient:
     def _parse_script_sections(data: dict) -> List[ScriptSection]:
         """Normalise the OpenAI response into ``ScriptSection`` instances."""
 
+        LOGGER.info("Parsing script sections from data: %s", data)
+
         fallback_summaries: List[str] = []
 
         sections_payload = data.get("sections")
-        if not sections_payload and isinstance(data.get("script"), dict):
-            sections_payload = data["script"].get("sections")
+        script_payload = data.get("script")
+        if not sections_payload and isinstance(script_payload, dict):
+            for key in ("sections", "items", "parts", "segments"):
+                if key in script_payload:
+                    sections_payload = script_payload[key]
+                    break
+        elif not sections_payload and isinstance(script_payload, list):
+            sections_payload = script_payload
 
-        # Some models occasionally nest the sections payload or return it as a JSON
-        # string. Normalise the value into an iterable of dictionaries. When a
-        # plain string is returned we keep the text as a fallback summary.
-        if isinstance(sections_payload, str):
-            normalised_str = sections_payload.strip()
-            if normalised_str:
-                try:
-                    sections_payload = json.loads(normalised_str)
-                except json.JSONDecodeError:  # pragma: no cover - defensive
-                    fallback_summaries.extend(
-                        OpenAIWorkflowClient._split_text(normalised_str)
-                    )
-                    sections_payload = []
-            else:
-                sections_payload = []
-        if isinstance(sections_payload, dict):
-            sections_payload = list(sections_payload.values())
-        if sections_payload is None:
-            sections_payload = []
+        if not sections_payload:
+            requirements_payload = data.get("requirements")
+            if isinstance(requirements_payload, dict):
+                for key in ("sections", "items", "parts", "segments"):
+                    if key in requirements_payload:
+                        sections_payload = requirements_payload[key]
+                        break
+            elif isinstance(requirements_payload, list):
+                sections_payload = requirements_payload
+
+        sections_payload = OpenAIWorkflowClient._normalise_sections_payload(
+            sections_payload, fallback_summaries
+        )
 
         sections: List[ScriptSection] = []
-        for item in sections_payload:
+        for index, item in enumerate(sections_payload, start=1):
             if isinstance(item, str):
                 fallback_summaries.extend(OpenAIWorkflowClient._split_text(item))
                 continue
             if not isinstance(item, dict):
                 continue
-            citations = item.get("citations", []) or []
-            if isinstance(citations, str):
-                citations = [citations]
-            elif not isinstance(citations, list):
-                citations = []
+
+            inferred_section_name: Optional[str] = None
+
+            summary = OpenAIWorkflowClient._normalise_section_summary(
+                item.get("summary")
+            )
+            if not summary:
+                summary = OpenAIWorkflowClient._normalise_section_summary(
+                    item.get("content")
+                )
+            if not summary:
+                summary = OpenAIWorkflowClient._normalise_section_summary(
+                    item.get("text")
+                )
+
+            if not summary:
+                candidate_keys = [
+                    key
+                    for key in item.keys()
+                    if key
+                    not in {
+                        "section",
+                        "summary",
+                        "content",
+                        "text",
+                        "body",
+                        "narrative",
+                        "citations",
+                        "sources",
+                        "references",
+                        "timeframe",
+                        "time_frame",
+                        "time_range",
+                        "title",
+                        "name",
+                        "heading",
+                    }
+                ]
+                if len(candidate_keys) == 1:
+                    inferred_section_name = str(candidate_keys[0]).strip() or None
+                    summary = OpenAIWorkflowClient._normalise_section_summary(
+                        item[candidate_keys[0]]
+                    )
+
+            citations = OpenAIWorkflowClient._normalise_citations(
+                item.get("citations")
+            )
+            if not citations:
+                citations = OpenAIWorkflowClient._normalise_citations(
+                    item.get("sources")
+                )
+            if not citations:
+                citations = OpenAIWorkflowClient._normalise_citations(
+                    item.get("references")
+                )
+
+            timeframe = OpenAIWorkflowClient._normalise_timeframe(
+                item.get("timeframe")
+            )
+            if not timeframe:
+                timeframe = OpenAIWorkflowClient._normalise_timeframe(
+                    item.get("time_frame")
+                )
+            if not timeframe:
+                timeframe = OpenAIWorkflowClient._normalise_timeframe(
+                    item.get("time_range")
+                )
+
+            section_name = item.get("section") or item.get("title")
+            if not section_name:
+                section_name = (
+                    item.get("name")
+                    or item.get("heading")
+                    or inferred_section_name
+                )
+            section_value = (
+                str(section_name).strip()
+                if section_name
+                else f"section_{index}"
+            )
+
             sections.append(
                 ScriptSection(
-                    section=str(item.get("section", "section")),
-                    timeframe=str(item.get("timeframe", "")),
-                    summary=str(item.get("summary", "")),
-                    citations=[str(c) for c in citations],
+                    section=section_value,
+                    timeframe=timeframe,
+                    summary=summary,
+                    citations=citations,
                 )
             )
 
@@ -329,6 +407,135 @@ class OpenAIWorkflowClient:
             )
             for index, summary in enumerate(normalised_fallbacks[:3])
         ]
+
+    @staticmethod
+    def _normalise_sections_payload(
+        value: Optional[object], fallback_summaries: List[str]
+    ) -> List[object]:
+        if value is None:
+            return []
+
+        if isinstance(value, str):
+            normalised_str = value.strip()
+            if not normalised_str:
+                return []
+            try:
+                loaded = json.loads(normalised_str)
+            except json.JSONDecodeError:  # pragma: no cover - defensive
+                fallback_summaries.extend(
+                    OpenAIWorkflowClient._split_text(normalised_str)
+                )
+                return []
+            return OpenAIWorkflowClient._normalise_sections_payload(
+                loaded, fallback_summaries
+            )
+
+        if isinstance(value, dict):
+            # Some responses use a mapping of identifiers -> section payload.
+            if {
+                "section",
+                "summary",
+                "content",
+                "text",
+            } & set(value.keys()):
+                return [value]
+            return list(value.values())
+
+        if isinstance(value, (list, tuple, set)):
+            return list(value)
+
+        return [value]
+
+    @staticmethod
+    def _normalise_section_summary(value: Optional[object]) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, list):
+            parts = [
+                OpenAIWorkflowClient._normalise_section_summary(item)
+                for item in value
+            ]
+            return " ".join(part for part in parts if part).strip()
+        if isinstance(value, dict):
+            for key in ("summary", "content", "text", "body", "narrative"):
+                if key in value:
+                    candidate = OpenAIWorkflowClient._normalise_section_summary(
+                        value[key]
+                    )
+                    if candidate:
+                        return candidate
+            # Fallback to concatenating all values.
+            parts = [
+                OpenAIWorkflowClient._normalise_section_summary(item)
+                for item in value.values()
+            ]
+            return " ".join(part for part in parts if part).strip()
+        return str(value)
+
+    @staticmethod
+    def _normalise_citations(value: Optional[object]) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            citation = value.strip()
+            return [citation] if citation else []
+        if isinstance(value, (int, float)):
+            return [str(value)]
+        if isinstance(value, list):
+            results: List[str] = []
+            for item in value:
+                if item is None:
+                    continue
+                if isinstance(item, str):
+                    citation = item.strip()
+                    if citation:
+                        results.append(citation)
+                    continue
+                if isinstance(item, dict):
+                    for key in (
+                        "citation",
+                        "text",
+                        "source",
+                        "reference",
+                        "url",
+                        "title",
+                    ):
+                        field = item.get(key)
+                        if isinstance(field, str) and field.strip():
+                            results.append(field.strip())
+                            break
+                    else:
+                        try:
+                            results.append(
+                                json.dumps(item, ensure_ascii=False, sort_keys=True)
+                            )
+                        except TypeError:  # pragma: no cover - defensive
+                            results.append(str(item))
+                    continue
+                results.append(str(item))
+            return results
+        if isinstance(value, dict):
+            return OpenAIWorkflowClient._normalise_citations(list(value.values()))
+        return [str(value)]
+
+    @staticmethod
+    def _normalise_timeframe(value: Optional[object]) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, list):
+            parts = [
+                str(item).strip() for item in value if str(item).strip()
+            ]
+            return " - ".join(parts)
+        return str(value).strip()
 
     @staticmethod
     def _split_text(value: str) -> List[str]:
