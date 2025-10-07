@@ -116,15 +116,37 @@ class OpenAIWorkflowClient:
             }
         )
         data = self._create_json_completion(system_prompt, user_prompt)
-        sections_payload = data.get("sections", [])
+        sections_payload = data.get("sections")
+        if not sections_payload and isinstance(data.get("script"), dict):
+            sections_payload = data["script"].get("sections")
+
+        # Some models occasionally nest the sections payload or return it as a JSON
+        # string. Normalise the value into an iterable of dictionaries.
+        if isinstance(sections_payload, str):
+            try:
+                sections_payload = json.loads(sections_payload)
+            except json.JSONDecodeError:  # pragma: no cover - defensive
+                sections_payload = []
+        if isinstance(sections_payload, dict):
+            sections_payload = list(sections_payload.values())
+        if sections_payload is None:
+            sections_payload = []
+
         sections: List[ScriptSection] = []
         for item in sections_payload:
+            if not isinstance(item, dict):
+                continue
+            citations = item.get("citations", []) or []
+            if isinstance(citations, str):
+                citations = [citations]
+            elif not isinstance(citations, list):
+                citations = []
             sections.append(
                 ScriptSection(
-                    section=item.get("section", "section"),
-                    timeframe=item.get("timeframe", ""),
-                    summary=item.get("summary", ""),
-                    citations=item.get("citations", []) or [],
+                    section=str(item.get("section", "section")),
+                    timeframe=str(item.get("timeframe", "")),
+                    summary=str(item.get("summary", "")),
+                    citations=[str(c) for c in citations],
                 )
             )
         if not sections:
