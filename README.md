@@ -1,6 +1,6 @@
 # video-gen
 
-这是一个 AI 小视频生成工具的雏形实现，围绕六步大模型工作流完成架构搭建：
+这是一个 AI 小视频生成工具，围绕六步大模型工作流完成架构搭建：
 
 1. 剧本生成（含时间线）
 2. 画面策划与分镜
@@ -22,6 +22,18 @@
 ## 快速开始
 
 按“确认系统 Python → 安装依赖 → 配置服务凭证 → 启动接口并提交任务”的顺序完成本地部署。
+
+### OpenAI 本地代理设置指南
+
+当你的网络需要借助 Clash、Surge、Proxifier 等本地代理工具访问 OpenAI 时，只需按下面的“大白话”流程操作即可：
+
+1. **先确认代理地址**：在代理工具中找到本机监听的地址与端口，例如 `http://127.0.0.1:7890` 或 `socks5h://127.0.0.1:1080`。
+2. **写入配置文件**：打开 `config/services.toml`，在 `[openai]` 模块中把 `proxy` 改成上一步的地址（必须带上 `http://`、`https://`、`socks5://` 或 `socks5h://` 前缀）。
+3. **或使用环境变量**：不想改文件时，在终端执行 `export OPENAI_PROXY=http://127.0.0.1:7890`（Windows PowerShell 使用 `setx OPENAI_PROXY http://127.0.0.1:7890`）。
+4. **保持其他服务直连**：DashScope、讯飞、Mubert 等客户端默认不会继承系统代理，无需再做额外修改，避免走错出口导致鉴权失败。
+5. **可选的网络细节**：如果代理存在自签证书，可通过 `OPENAI_VERIFY=false` 或 `OPENAI_VERIFY=/path/to/cacert.pem` 关闭/指定证书校验；若代理响应较慢，可设置 `OPENAI_TIMEOUT_SECONDS=120` 延长超时时间。
+
+按照以上步骤处理后，所有 OpenAI Chat / 图像 / Workflow 请求都会固定通过本地代理发出，其余服务仍旧保持直连外网。
 
 ### 1. 确认系统 Python 版本
 
@@ -51,7 +63,7 @@ cp config/services.example.toml config/services.toml
 ```
 
 2. 按需填写以下字段（示例文件中已标注申请地址）：
-    - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。若你的机器需要通过本地代理访问 OpenAI，请直接在 `[openai]` 下把 `proxy` 改成自己的代理地址（例如 `http://127.0.0.1:7890`），这样工作流里所有 OpenAI 请求都会自动走这个本地代理；其他服务保持默认配置即可，它们不会再继承系统代理。
+    - **OpenAI**：在 <https://platform.openai.com/account/api-keys> 申请 API Key，用于 GPT-4o 系列与 DALL·E 3 调用。若你的机器需要通过本地代理访问 OpenAI，请直接在 `[openai]` 下把 `proxy` 改成自己的代理地址（例如 `http://127.0.0.1:7890` 或 `socks5h://127.0.0.1:1080`），这样工作流里所有 OpenAI 请求都会自动走这个本地代理；其他服务保持默认配置即可，它们不会再继承系统代理。
     - **讯飞 TTS**：使用科大讯飞“在线语音合成（Text-to-Speech WebAPI v2）”能力，在 <https://www.xfyun.cn/services/online_tts> 创建应用后获取 AppID、APIKey、APISecret。
     - **阿里云 DashScope 音乐生成 / 环境音效**：在 <https://dashscope.aliyun.com/> 注册并开通音频生成能力，单一 API Key 既可用于背景音乐，也可用于生成环境音效。
     - **DeepSeek**（可选）：在 <https://platform.deepseek.com/> 申请 API Key，按需配置自定义 `base_url`、模型、温度，以及网络相关的 `timeout_seconds`、`trust_env`（是否继承系统代理）或 `verify`（证书校验/自签路径），用于人物传记初稿的 LLM 推理。
@@ -63,6 +75,8 @@ cp config/services.example.toml config/services.toml
 export OPENAI_API_KEY=sk-...
 export OPENAI_PROXY=http://127.0.0.1:7890   # 如果要走本地代理，请改成自己的端口
 export OPENAI_TRUST_ENV=false               # 默认关闭系统代理继承
+export OPENAI_TIMEOUT_SECONDS=60            # 可选：延长 OpenAI 请求超时时间
+export OPENAI_VERIFY=true                   # 可选：false/true/证书路径（自签证书时使用）
 export XUNFEI_APP_ID=...
 export XUNFEI_API_KEY=...
 export XUNFEI_API_SECRET=...

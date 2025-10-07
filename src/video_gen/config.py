@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Union
+from urllib.parse import urlparse
 
 try:
     import tomllib  # Python 3.11+
@@ -29,6 +30,74 @@ class OpenAISettings:
     trust_env: bool = False
     timeout_seconds: Optional[float] = None
     verify: Optional[Union[str, bool]] = None
+
+    _ALLOWED_PROXY_SCHEMES = {"http", "https", "socks5", "socks5h"}
+
+    def __post_init__(self) -> None:
+        self.api_key = (self.api_key or "").strip()
+        if not self.api_key:
+            raise ConfigurationError("OpenAI api_key must not be empty")
+
+        self.model = (self.model or "").strip()
+        if not self.model:
+            raise ConfigurationError("OpenAI model must not be empty")
+
+        self.image_model = (self.image_model or "").strip()
+        if not self.image_model:
+            raise ConfigurationError("OpenAI image_model must not be empty")
+
+        self.base_url = _coalesce(self.base_url)
+        if self.base_url:
+            parsed_base = urlparse(self.base_url)
+            if not parsed_base.scheme or not parsed_base.netloc:
+                raise ConfigurationError(
+                    "OpenAI base_url must include scheme and hostname"
+                )
+
+        try:
+            self.temperature = float(self.temperature)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+            raise ConfigurationError("OpenAI temperature must be numeric") from exc
+        if not 0 <= self.temperature <= 2:
+            raise ConfigurationError("OpenAI temperature must be between 0 and 2")
+
+        if not isinstance(self.trust_env, bool):
+            raise ConfigurationError("OpenAI trust_env must be a boolean value")
+
+        if isinstance(self.verify, str):
+            self.verify = _coalesce(self.verify)
+        elif self.verify is not None and not isinstance(self.verify, bool):
+            raise ConfigurationError(
+                "OpenAI verify must be true/false or a certificate path string"
+            )
+
+        normalized_proxy = _coalesce(self.proxy)
+        if normalized_proxy:
+            parsed = urlparse(normalized_proxy)
+            if parsed.scheme not in self._ALLOWED_PROXY_SCHEMES:
+                raise ConfigurationError(
+                    "OpenAI proxy must start with http(s) or socks5(s) scheme"
+                )
+            if not parsed.hostname:
+                raise ConfigurationError(
+                    "OpenAI proxy is missing a hostname or IP address"
+                )
+            self.proxy = normalized_proxy
+        else:
+            self.proxy = None
+
+        if self.timeout_seconds is not None:
+            try:
+                timeout_value = float(self.timeout_seconds)
+            except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+                raise ConfigurationError(
+                    "OpenAI timeout_seconds must be numeric"
+                ) from exc
+            if timeout_value <= 0:
+                raise ConfigurationError(
+                    "OpenAI timeout_seconds must be greater than zero"
+                )
+            self.timeout_seconds = timeout_value
 
 
 @dataclass
@@ -172,6 +241,24 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
             trust_env = _parse_bool(_coalesce(os.environ.get("OPENAI_TRUST_ENV")))
             if trust_env is not None:
                 openai_entry["trust_env"] = trust_env
+            timeout_value = _coalesce(os.environ.get("OPENAI_TIMEOUT_SECONDS"))
+            if timeout_value:
+                try:
+                    openai_entry["timeout_seconds"] = float(timeout_value)
+                except ValueError as exc:  # pragma: no cover - defensive
+                    raise ConfigurationError(
+                        "OPENAI_TIMEOUT_SECONDS must be a numeric value"
+                    ) from exc
+            verify_value = os.environ.get("OPENAI_VERIFY")
+            if verify_value is not None:
+                normalized_verify = _coalesce(verify_value)
+                if normalized_verify is None:
+                    openai_entry["verify"] = None
+                else:
+                    try:
+                        openai_entry["verify"] = _parse_bool(normalized_verify)
+                    except ConfigurationError:
+                        openai_entry["verify"] = normalized_verify
             data["openai"] = openai_entry
 
         xunfei_app_id = _coalesce(os.environ.get("XUNFEI_APP_ID"))
