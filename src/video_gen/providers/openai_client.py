@@ -53,7 +53,11 @@ class OpenAIWorkflowClient:
         kwargs = {"api_key": settings.api_key}
         if settings.base_url:
             kwargs["base_url"] = settings.base_url
-        http_client_kwargs = {"trust_env": settings.trust_env}
+        http_client_kwargs: dict[str, object] = {}
+        if settings.trust_env is not None:
+            http_client_kwargs["trust_env"] = settings.trust_env
+        if settings.proxy:
+            http_client_kwargs["proxies"] = settings.proxy
         if settings.timeout_seconds is not None:
             http_client_kwargs["timeout"] = httpx.Timeout(settings.timeout_seconds)
         if settings.verify is not None:

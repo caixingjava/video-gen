@@ -25,7 +25,8 @@ class OpenAISettings:
     image_model: str = "gpt-image-1"
     base_url: Optional[str] = None
     temperature: float = 0.3
-    trust_env: bool = True
+    proxy: Optional[str] = None
+    trust_env: bool = False
     timeout_seconds: Optional[float] = None
     verify: Optional[Union[str, bool]] = None
 
@@ -158,13 +159,20 @@ def load_service_config(path: Optional[Union[str, Path]] = None) -> ServiceConfi
 
         openai_api_key = _coalesce(os.environ.get("OPENAI_API_KEY"))
         if openai_api_key:
-            data["openai"] = {
+            openai_entry = {
                 "api_key": openai_api_key,
                 "base_url": _coalesce(os.environ.get("OPENAI_BASE_URL")),
                 "model": _coalesce(os.environ.get("OPENAI_MODEL")) or "gpt-4o-mini",
                 "image_model": _coalesce(os.environ.get("OPENAI_IMAGE_MODEL")) or "gpt-image-1",
                 "temperature": float(os.environ.get("OPENAI_TEMPERATURE", 0.3)),
             }
+            proxy = _coalesce(os.environ.get("OPENAI_PROXY"))
+            if proxy:
+                openai_entry["proxy"] = proxy
+            trust_env = _parse_bool(_coalesce(os.environ.get("OPENAI_TRUST_ENV")))
+            if trust_env is not None:
+                openai_entry["trust_env"] = trust_env
+            data["openai"] = openai_entry
 
         xunfei_app_id = _coalesce(os.environ.get("XUNFEI_APP_ID"))
         if xunfei_app_id:
