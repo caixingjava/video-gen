@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Iterable, List, Optional, Union
 
+import httpx
 from openai import OpenAI
 
 from ..config import OpenAISettings
@@ -52,7 +53,8 @@ class OpenAIWorkflowClient:
         kwargs = {"api_key": settings.api_key}
         if settings.base_url:
             kwargs["base_url"] = settings.base_url
-        self._client = OpenAI(**kwargs)
+        http_client = httpx.Client(trust_env=True)
+        self._client = OpenAI(http_client=http_client, **kwargs)
         self._model = settings.model
         self._image_model = settings.image_model
         self._temperature = settings.temperature
