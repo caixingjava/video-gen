@@ -1,0 +1,66 @@
+[openai]
+api_key = "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"
+base_url = ""
+model = "gpt-4o-mini"
+proxy = "http://127.0.0.1:2334"
+image_model = "gpt-image-1"
+temperature = 0.3
+
+[xunfei_tts]
+app_id = "ea4a86b0"
+api_key = "77b8731ef8110cb17c3c612f0f216cbf"
+api_secret = "ZjEzYjg1MGY1MzFhZjA2ZWI2OTM3NGUx"
+voice = "xiaoyan"
+format = "mp3"
+speed = 50
+
+[dashscope_music]
+# 阿里云 DashScope 音乐生成配置
+# 申请地址：https://dashscope.aliyun.com/
+api_key = "sk-a7634541b4504d7eaff39cdefb5907a7"
+model = "text-to-music-001"
+style = "中国古风"
+duration_seconds = 120
+
+[dashscope_ambience]
+# 阿里云 DashScope 环境音效配置（同样使用音频生成能力，可与音乐共用密钥）
+# 申请地址：https://dashscope.aliyun.com/
+api_key = "sk-a7634541b4504d7eaff39cdefb5907a7"
+model = "text-to-music-001"
+style = "中国场景环境音"
+duration_seconds = 45
+
+[deepseek]
+# DeepSeek 大模型调用配置
+# 申请地址：https://platform.deepseek.com/
+api_key = "sk-7256bc6943ab483ab90ccb6b9e783470"
+base_url = ""
+model = "deepseek-chat"
+temperature = 0.3
+timeout_seconds = 60
+trust_env = true  # 是否继承系统代理。若需禁用代理可改为 false。
+# verify 可写 true/false 或 CA 证书路径；默认继承 httpx 行为
+verify = true
+
+[doubao]
+# 火山引擎豆包图像生成配置
+# 申请地址：https://www.volcengine.com/product/doubao
+api_key = "22cf1fcd-94fe-4d57-9f87-89c9d2ee8dab"
+base_url = ""
+model = "doubao-vision"
+negative_prompt = ""
+timeout_seconds = 60
+trust_env = true
+verify = true
+
+[text_generation]
+# 可选 provider: "openai"（默认）或 "deepseek"
+provider = "openai"
+
+[image_generation]
+# 可选 provider: "openai"（默认）或 "doubao"
+provider = "openai"
+
+[storage]
+# Directory where synthesized media will be stored
+output_dir = "./var/output"
